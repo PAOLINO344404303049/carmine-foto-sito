@@ -1,0 +1,7 @@
+{
+  "name": "Carmine Felice Napolitano - Photography",
+  "description": "A professional photography studio platform for photo printing services, featuring user accounts, drag-and-drop uploads, package management, and an admin dashboard for order processing.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

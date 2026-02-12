@@ -1,0 +1,99 @@
+
+import React, { useState } from 'react';
+import { User } from '../types';
+
+interface AuthProps {
+  mode: 'login' | 'register';
+  navigate: (page: string) => void;
+  onLogin: (email: string, pass: string) => User;
+}
+
+const Auth: React.FC<AuthProps> = ({ mode, navigate, onLogin }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email && password) {
+      const user = onLogin(email, password);
+      // Se è admin, naviga direttamente alla dashboard admin
+      if (user.role === 'admin') {
+        navigate('admin');
+      } else {
+        navigate('dashboard');
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6 py-12">
+      <div className="max-w-md w-full bg-white p-10 rounded-3xl shadow-xl border border-gray-100">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-serif mb-2">{mode === 'login' ? 'Accesso' : 'Crea Account'}</h2>
+          <p className="text-gray-400 text-sm">
+            {mode === 'login' 
+              ? 'Accedi per gestire i tuoi ordini o il pannello fotografico.' 
+              : 'Registrati per iniziare a stampare i tuoi ricordi.'}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {mode === 'register' && (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Nome Completo</label>
+              <input 
+                type="text" 
+                required 
+                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black transition-all"
+                placeholder="Nome e Cognome"
+              />
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Email</label>
+            <input 
+              type="email" 
+              required 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black transition-all"
+              placeholder="email@esempio.it"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Password</label>
+            <input 
+              type="password" 
+              required 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black transition-all"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button 
+            type="submit"
+            className="w-full py-4 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-lg transition-all transform hover:scale-[1.02]"
+          >
+            {mode === 'login' ? 'Entra ora' : 'Registrati'}
+          </button>
+        </form>
+
+        <div className="mt-10 text-center">
+          <p className="text-sm text-gray-400">
+            {mode === 'login' ? "Non hai un account?" : "Hai già un account?"}
+            <button 
+              onClick={() => navigate(mode === 'login' ? 'register' : 'login')}
+              className="ml-2 font-bold text-black hover:underline"
+            >
+              {mode === 'login' ? 'Registrati ora' : 'Accedi'}
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Auth;

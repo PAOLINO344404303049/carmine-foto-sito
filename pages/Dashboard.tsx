@@ -1,0 +1,244 @@
+
+import React, { useState, useRef } from 'react';
+import { User, PhotoPackage, PhotoFile, Order, OrderStatus, PaymentMethod } from '../types';
+import { PRINT_PACKAGES, SUMUP_PAY_LINK } from '../constants';
+import { EmailService } from '../services/email';
+
+interface DashboardProps {
+  user: User;
+  orders: Order[];
+  addOrder: (order: Order) => void;
+  navigate: (page: string) => void;
+  onLogout: () => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLogout }) => {
+  const [selectedPackage, setSelectedPackage] = useState<PhotoPackage | null>(PRINT_PACKAGES.length === 1 ? PRINT_PACKAGES[0] : null);
+  const [uploadedPhotos, setUploadedPhotos] = useState<PhotoFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !selectedPackage) return;
+    
+    setIsUploading(true);
+    
+    setTimeout(() => {
+      const newPhotos: PhotoFile[] = Array.from(files).map((file: any) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        size: file.size,
+        url: URL.createObjectURL(file)
+      }));
+      
+      const totalAllowed = selectedPackage.count;
+      const currentCount = uploadedPhotos.length;
+      const remaining = Math.max(0, totalAllowed - currentCount);
+      
+      if (remaining === 0) {
+        alert(`Hai già raggiunto il limite di ${totalAllowed} foto.`);
+      } else {
+        setUploadedPhotos([...uploadedPhotos, ...newPhotos.slice(0, remaining)]);
+      }
+      setIsUploading(false);
+    }, 1500);
+  };
+
+  const finalizeOrder = async () => {
+    if (!selectedPackage || uploadedPhotos.length === 0) return;
+
+    const newOrder: Order = {
+      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      packageId: selectedPackage.id,
+      packageName: selectedPackage.name,
+      photos: uploadedPhotos,
+      status: OrderStatus.PENDING,
+      paymentMethod: PaymentMethod.ONLINE_SUMUP,
+      createdAt: new Date().toISOString(),
+      total: selectedPackage.price
+    };
+
+    addOrder(newOrder);
+    
+    // Invio Email di Conferma
+    EmailService.sendOrderConfirmation(newOrder);
+
+    window.open(SUMUP_PAY_LINK, '_blank');
+    
+    setUploadedPhotos([]);
+    setShowCheckout(false);
+    alert("Pratica inviata! Abbiamo inviato una mail di conferma a " + user.email + ". Completa ora il pagamento sicuro su SumUp.");
+  };
+
+  const currentStatusColor = (status: OrderStatus) => {
+    switch (status) {
+      case OrderStatus.PENDING: return 'bg-yellow-100 text-yellow-700';
+      case OrderStatus.PROCESSING: return 'bg-blue-100 text-blue-700';
+      case OrderStatus.PRINTED: return 'bg-purple-100 text-purple-700';
+      case OrderStatus.COLLECTED: return 'bg-green-100 text-green-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  return (
+    <div className="py-12 px-4 md:px-6 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
+        
+        <div className="lg:col-span-2 space-y-8">
+          <div className="bg-white p-6 md:p-12 rounded-[40px] shadow-sm border border-gray-100">
+            <h2 className="text-2xl md:text-3xl font-serif mb-8 text-black">Il tuo Ordine</h2>
+            
+            {!selectedPackage ? (
+              <div className="space-y-6">
+                <p className="text-gray-500 mb-6 font-bold uppercase tracking-widest text-[10px]">1. Seleziona il pacchetto</p>
+                <div className="grid grid-cols-1 gap-6">
+                  {PRINT_PACKAGES.map(pkg => (
+                    <button 
+                      key={pkg.id}
+                      onClick={() => setSelectedPackage(pkg)}
+                      className="p-8 border-2 border-gray-50 rounded-3xl text-left hover:border-black hover:shadow-xl transition-all bg-gray-50/50"
+                    >
+                      <h4 className="font-bold text-lg">{pkg.name}</h4>
+                      <p className="text-sm text-gray-400 mt-1">{pkg.count} foto professionali</p>
+                      <p className="text-2xl font-serif font-bold mt-4">€{pkg.price}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : !showCheckout ? (
+              <div className="space-y-8">
+                <div className="flex items-center justify-between p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                  <div className="flex-grow">
+                    <h4 className="font-bold text-lg md:text-xl uppercase tracking-tighter">{selectedPackage.name}</h4>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                      {uploadedPhotos.length} / {selectedPackage.count} foto caricate
+                    </p>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-[40px] p-8 md:p-16 text-center cursor-pointer transition-all ${isUploading ? 'bg-gray-100 opacity-50 pointer-events-none' : 'hover:bg-gray-50/80 hover:border-black bg-gray-50/30 border-gray-200'}`}
+                >
+                  <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                  {isUploading ? (
+                    <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Elaborazione file...</p>
+                    </div>
+                  ) : (
+                    <>
+                        <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-6 text-black border border-gray-100">
+                          <i className="fas fa-upload text-xl md:text-2xl"></i>
+                        </div>
+                        <h4 className="font-bold text-base md:text-lg mb-2 text-black uppercase tracking-widest">Carica i tuoi file</h4>
+                        <p className="text-xs text-gray-400 font-medium">Tocca per selezionare le immagini (JPG/PNG).</p>
+                    </>
+                  )}
+                </div>
+
+                {uploadedPhotos.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                    {uploadedPhotos.map(photo => (
+                      <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+                        <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
+                        <button onClick={(e) => { e.stopPropagation(); setUploadedPhotos(prev => prev.filter(p => p.id !== photo.id)); }} className="absolute top-1 right-1 bg-black/80 text-white w-6 h-6 rounded-full shadow-md flex items-center justify-center">
+                          <i className="fas fa-times text-[8px]"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {uploadedPhotos.length > 0 && (
+                  <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <p className="text-xl md:text-2xl font-serif font-bold text-black italic">Totale: €{selectedPackage.price}</p>
+                    <button 
+                      onClick={() => setShowCheckout(true)} 
+                      className="w-full sm:w-auto px-12 py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px]"
+                    >
+                      Procedi al Pagamento
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-8 py-4">
+                <button onClick={() => setShowCheckout(false)} className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black">
+                  <i className="fas fa-arrow-left mr-2"></i> Torna ai file
+                </button>
+                <div className="text-center mb-10">
+                   <h3 className="text-2xl md:text-3xl font-serif mb-4">Pagamento Sicuro SumUp</h3>
+                   <p className="text-gray-500 italic text-sm">Saldando online l'ordine entrerà immediatamente in lavorazione.</p>
+                </div>
+                
+                <div className="max-w-md mx-auto bg-gray-50 p-8 md:p-12 rounded-[50px] border border-gray-100 text-center shadow-lg">
+                   <div className="w-20 h-20 bg-black text-white rounded-[28px] flex items-center justify-center mx-auto mb-8 text-3xl shadow-xl">
+                      <i className="fas fa-shield-alt"></i>
+                   </div>
+                   <h4 className="font-bold text-lg mb-4 uppercase tracking-widest">Circuito SumUp Sicuro</h4>
+                   <p className="text-[10px] text-gray-400 mb-10 leading-relaxed font-medium uppercase tracking-widest">
+                      Il ritiro in studio è possibile solo previo pagamento anticipato.
+                   </p>
+                   <button 
+                    onClick={finalizeOrder}
+                    className="w-full py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-4"
+                   >
+                      <span>Paga ora online</span>
+                      <i className="fas fa-external-link-alt"></i>
+                   </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          <div className="bg-white p-8 md:p-10 rounded-[40px] shadow-sm border border-gray-100">
+            <div className="flex items-center space-x-6 mb-8">
+              <div className="w-16 h-16 bg-black text-white rounded-[20px] flex items-center justify-center text-2xl font-serif shadow-xl">
+                {user.name[0].toUpperCase()}
+              </div>
+              <div>
+                <h3 className="font-bold text-xl text-black leading-none">{user.name}</h3>
+                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2">Area Cliente</p>
+              </div>
+            </div>
+            <button onClick={onLogout} className="w-full py-4 border border-gray-100 text-gray-400 hover:text-red-600 rounded-2xl text-[9px] font-bold uppercase tracking-[0.2em] transition-all">
+               LOGOUT
+            </button>
+          </div>
+
+          <div className="bg-white p-8 md:p-10 rounded-[40px] shadow-sm border border-gray-100">
+            <h2 className="text-lg font-serif mb-8 text-black border-b border-gray-50 pb-5">Storico Ordini</h2>
+            {orders.length === 0 ? (
+              <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest text-center py-10 italic">Nessun ordine presente.</p>
+            ) : (
+              <div className="space-y-4">
+                {orders.map(order => (
+                  <div key={order.id} className="p-5 border border-gray-100 rounded-2xl bg-gray-50/50">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[8px] font-bold text-gray-300 uppercase tracking-widest">{order.id}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase border ${currentStatusColor(order.status)}`}>
+                        {order.status}
+                      </span>
+                    </div>
+                    <p className="font-bold text-xs text-gray-900 mb-1">{order.packageName}</p>
+                    <p className="text-[8px] text-gray-400 uppercase font-bold tracking-widest">{order.photos.length} Foto &bull; €{order.total}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
