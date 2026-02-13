@@ -37,16 +37,12 @@ export const useStore = () => {
     try {
       console.log(`[STORE] Recupero ordini per: ${user.email} (Ruolo: ${user.role})`);
       
-      // Iniziamo la query base
       let query = supabase.from('orders').select('*');
       
-      // La RLS di Supabase filtra già i dati, ma applichiamo il filtro esplicito 
-      // per chiarezza e per evitare overhead se l'utente non è admin.
       if (user.email !== ADMIN_EMAIL) {
         query = query.eq('customer_email', user.email);
       }
 
-      // Ordinamento per data decrescente (DESC) come richiesto
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
@@ -62,12 +58,16 @@ export const useStore = () => {
           userEmail: item.customer_email,
           packageId: 'standard_100', 
           packageName: 'Pacchetto 100 Foto',
-          photos: (item.photo_urls || []).map((url: string, index: number) => ({
-            id: `photo-${index}`,
-            name: `Foto ${index + 1}`,
-            url: url,
-            size: 0
-          })),
+          photos: (item.photo_urls || []).map((url: string, index: number) => {
+            // Estraiamo l'estensione dall'URL di Cloudinary per garantire che lo ZIP sia leggibile
+            const extension = url.split('.').pop()?.split('?')[0] || 'jpg';
+            return {
+              id: `photo-${index}`,
+              name: `Foto_${index + 1}.${extension}`,
+              url: url,
+              size: 0
+            };
+          }),
           status: (item.status as OrderStatus) || OrderStatus.PENDING_PAYMENT,
           paymentMethod: PaymentMethod.ONLINE_SUMUP,
           createdAt: item.created_at,
@@ -109,7 +109,6 @@ export const useStore = () => {
   };
 
   const signUp = async (email: string, pass: string): Promise<User> => {
-    // Registrazione: Supabase è configurato per NON richiedere conferma email
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password: pass,
@@ -141,7 +140,6 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    // Prepariamo i dati ESATTAMENTE come richiesto dalla tabella
     const dbOrder = {
       customer_email: order.userEmail.toLowerCase(),
       photo_urls: order.photos.map(p => p.url),
@@ -159,10 +157,7 @@ export const useStore = () => {
     }
 
     console.log("[STORE] Risposta successo Supabase:", data);
-    
-    // Aggiornamento immediato lista locale
     await fetchOrders();
-    
     return data ? data[0] : null;
   };
 

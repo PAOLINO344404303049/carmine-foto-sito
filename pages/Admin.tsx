@@ -47,43 +47,70 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
       return;
     }
 
+    console.log(`[ADMIN] Inizio creazione ZIP per ordine ${order.id}`);
     setIsDownloading(order.id);
     setDownloadProgress(0);
     
     try {
+      // Gestione sicura del costruttore JSZip per ambienti ESM
       const JSZipConstructor = (JSZip as any).default || JSZip;
       const zip = new JSZipConstructor();
-      const folder = zip.folder(`${order.id}_${order.userName.replace(/\s+/g, '_')}`);
+      
+      const folderName = `${order.userName.replace(/\s+/g, '_')}_${order.id.slice(0, 8)}`;
+      const folder = zip.folder(folderName);
       
       let processedCount = 0;
       for (let i = 0; i < order.photos.length; i++) {
         const photo = order.photos[i];
         try {
-          const response = await fetch(photo.url, { cache: 'no-cache' });
-          if (!response.ok) throw new Error("Status not OK");
+          // Fondamentale: fetch con cache 'no-cache' per evitare problemi di dati corrotti e assicurare il download del blob
+          const response = await fetch(photo.url, { 
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-cache' 
+          });
+
+          if (!response.ok) throw new Error(`Errore HTTP: ${response.status}`);
+          
+          // Scarichiamo come BLOB binario
           const blob = await response.blob();
-          folder?.file(`${String(i + 1).padStart(3, '0')}_${photo.name}`, blob);
+          
+          // Verifichiamo che il nome del file abbia un'estensione valida
+          const fileName = photo.name.includes('.') ? photo.name : `${photo.name}.jpg`;
+          
+          folder?.file(fileName, blob, { binary: true });
+          console.log(`[ADMIN] Aggiunto allo ZIP: ${fileName}`);
         } catch (err) {
-          console.error(err);
-          folder?.file(`${photo.name}_ERRORE.txt`, "File non disponibile.");
+          console.error(`[ADMIN] Errore download foto ${photo.url}:`, err);
+          folder?.file(`ERRORE_FOTO_${i+1}.txt`, `Impossibile scaricare questa immagine: ${photo.url}`);
         }
         processedCount++;
         setDownloadProgress(Math.round((processedCount / order.photos.length) * 100));
       }
       
-      const content = await zip.generateAsync({ type: 'blob' });
+      console.log(`[ADMIN] Generazione file ZIP in corso...`);
+      const content = await zip.generateAsync({ 
+        type: 'blob',
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      });
+
       const downloadUrl = URL.createObjectURL(content);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `${order.userName.replace(/\s+/g, '_')}_${order.id}.zip`;
+      link.download = `${folderName}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(downloadUrl);
+      
+      console.log(`[ADMIN] ZIP scaricato con successo.`);
     } catch (err: any) {
-      alert(`Errore ZIP: ${err.message}`);
+      console.error(`[ADMIN] Errore generazione ZIP:`, err);
+      alert(`Errore critico durante la creazione dello ZIP: ${err.message}`);
     } finally {
       setIsDownloading(null);
+      setDownloadProgress(0);
     }
   };
 
