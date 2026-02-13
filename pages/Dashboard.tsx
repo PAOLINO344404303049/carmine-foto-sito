@@ -14,9 +14,6 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
-const CLOUDINARY_UPLOAD_PRESET = 'fotocs';
-const CLOUDINARY_CLOUD_NAME = 'divyx0t5b';
-
 const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, navigate, onLogout }) => {
   const [selectedPackage, setSelectedPackage] = useState<PhotoPackage | null>(PRINT_PACKAGES.length === 1 ? PRINT_PACKAGES[0] : null);
   const [uploadedPhotos, setUploadedPhotos] = useState<PhotoFile[]>([]);
@@ -28,22 +25,37 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
+    // 4) Aggiungi console.log prima della chiamata
+    console.log("Uploading file:", file);
+    
+    // 1) Crea un nuovo FormData()
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    formData.append("file", file);
+    formData.append("upload_preset", "fotocs");
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-      method: 'POST',
-      body: formData,
-    });
+    try {
+      // 2) Effettua la chiamata fetch
+      const response = await fetch("https://api.cloudinary.com/v1_1/divyx0t5b/image/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log('Cloudinary response error:', errorText);
-      throw new Error('Errore durante l\'upload su Cloudinary');
+      const data = await response.json();
+      
+      // 5) Aggiungi console.log dopo la risposta
+      console.log("Cloudinary response:", data);
+
+      // 3) Gestisci la risposta
+      if (!response.ok) {
+        console.error("Cloudinary error:", data);
+        throw new Error(`Cloudinary upload failed: ${data.error?.message || response.statusText}`);
+      }
+
+      return data.secure_url;
+    } catch (error) {
+      console.error("Network or parsing error during upload:", error);
+      throw error;
     }
-    const data = await response.json();
-    return data.secure_url;
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,7 +113,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         packageId: selectedPackage.id,
         packageName: selectedPackage.name,
         photos: uploadedPhotos,
-        status: OrderStatus.PENDING_PAYMENT, // Questo mappa a "pending" nel DB
+        status: OrderStatus.PENDING_PAYMENT, 
         paymentMethod: PaymentMethod.ONLINE_SUMUP,
         createdAt: new Date().toISOString(),
         total: selectedPackage.price
@@ -115,7 +127,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       
       EmailService.sendOrderConfirmation(newOrder);
     } catch (error) {
-      // Errore reale loggato in store.ts, qui evitiamo blocco UI
+      console.log("Error saving order to Supabase:", error);
     } finally {
       setIsSaving(false);
     }
