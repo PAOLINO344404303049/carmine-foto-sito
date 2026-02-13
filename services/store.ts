@@ -7,7 +7,10 @@ const AUTH_KEY = 'studio_auth_v2';
 const ADMIN_EMAIL = "carminephotography0@gmail.com";
 const ADMIN_PASS = "Carmine01.";
 
-// Definizione del tipo per il database Supabase come richiesto
+/**
+ * Definizione esplicita dell'interfaccia per gli ordini su Supabase
+ * come richiesto per garantire la compatibilità del build.
+ */
 interface SupabaseOrder {
   id?: string;
   customer_name: string;
@@ -30,7 +33,6 @@ export const useStore = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Carica gli ordini da Supabase quando l'utente è loggato
   useEffect(() => {
     if (user) {
       fetchOrders();
@@ -41,38 +43,42 @@ export const useStore = () => {
     if (!user) return;
     setLoading(true);
     
-    let query = supabase.from('orders').select('*');
-    
-    // Se non è admin, filtra per la propria email
-    if (user.role !== 'admin') {
-      query = query.eq('customer_email', user.email);
-    }
+    try {
+      let query = supabase.from('orders').select('*');
+      
+      if (user.role !== 'admin') {
+        query = query.eq('customer_email', user.email);
+      }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query.order('created_at', { ascending: false });
 
-    if (!error && data) {
-      // Tipizzazione esplicita dell'item per evitare 'any' implicito
-      const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item: SupabaseOrder) => ({
-        id: item.id || '',
-        userId: item.user_id || '',
-        userName: item.customer_name,
-        userEmail: item.customer_email,
-        packageId: item.package || '',
-        packageName: item.package,
-        photos: item.photo_urls.map((url: string, index: number) => ({
-          id: `photo-${index}`,
-          name: `Foto ${index + 1}`,
-          url: url,
-          size: 0
-        })),
-        status: item.status as OrderStatus,
-        paymentMethod: (item.payment_method as PaymentMethod) || PaymentMethod.ONLINE_SUMUP,
-        createdAt: item.created_at || new Date().toISOString(),
-        total: item.total || 0
-      }));
-      setOrders(mappedOrders);
+      if (!error && data) {
+        // Tipizzazione esplicita per evitare implicit 'any'
+        const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item: SupabaseOrder) => ({
+          id: item.id || '',
+          userId: item.user_id || '',
+          userName: item.customer_name,
+          userEmail: item.customer_email,
+          packageId: item.package, // Usiamo il nome del pacchetto come ID per semplicità
+          packageName: item.package,
+          photos: (item.photo_urls || []).map((url: string, index: number) => ({
+            id: `photo-${index}`,
+            name: `Foto ${index + 1}`,
+            url: url,
+            size: 0
+          })),
+          status: item.status as OrderStatus,
+          paymentMethod: (item.payment_method as PaymentMethod) || PaymentMethod.ONLINE_SUMUP,
+          createdAt: item.created_at || new Date().toISOString(),
+          total: item.total || 0
+        }));
+        setOrders(mappedOrders);
+      }
+    } catch (err) {
+      console.error("Errore fetch ordini:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const login = (email: string, pass: string): User => {
@@ -109,7 +115,7 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    // Mapping dell'ordine verso lo schema richiesto per Supabase
+    // Definizione dell'ordine per il database
     const dbOrder: SupabaseOrder = {
       id: order.id,
       user_id: order.userId,
