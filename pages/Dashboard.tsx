@@ -16,95 +16,104 @@ interface DashboardProps {
 
 const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, navigate, onLogout }) => {
   const [selectedPackage, setSelectedPackage] = useState<PhotoPackage | null>(PRINT_PACKAGES.length === 1 ? PRINT_PACKAGES[0] : null);
+  const [localFiles, setLocalFiles] = useState<File[]>([]);
   const [uploadedPhotos, setUploadedPhotos] = useState<PhotoFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
-    // 4) Aggiungi console.log prima della chiamata
+    // 3) Dentro funzione upload: console.log("Uploading file:", file)
     console.log("Uploading file:", file);
     
-    // 1) Crea un nuovo FormData()
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", "fotocs");
 
-    try {
-      // 2) Effettua la chiamata fetch
-      const response = await fetch("https://api.cloudinary.com/v1_1/divyx0t5b/image/upload", {
-        method: "POST",
-        body: formData,
-      });
+    const response = await fetch("https://api.cloudinary.com/v1_1/divyx0t5b/image/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-      const data = await response.json();
-      
-      // 5) Aggiungi console.log dopo la risposta
-      console.log("Cloudinary response:", data);
+    // 4) Dopo fetch Cloudinary: console.log("Cloudinary raw response:", response)
+    console.log("Cloudinary raw response:", response);
 
-      // 3) Gestisci la risposta
-      if (!response.ok) {
-        console.error("Cloudinary error:", data);
-        throw new Error(`Cloudinary upload failed: ${data.error?.message || response.statusText}`);
-      }
+    const data = await response.json();
+    
+    // 5) Dopo response.json(): console.log("Cloudinary data:", data)
+    console.log("Cloudinary data:", data);
 
-      return data.secure_url;
-    } catch (error) {
-      console.error("Network or parsing error during upload:", error);
-      throw error;
+    if (!response.ok) {
+      // 6) Se response.ok è false: console.error("Cloudinary FAILED:", data); throw new Error(JSON.stringify(data))
+      console.error("Cloudinary FAILED:", data);
+      throw new Error(JSON.stringify(data));
     }
+
+    return data.secure_url;
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !selectedPackage) return;
     
-    setIsUploading(true);
+    const newFiles = Array.from(files);
+    const totalAllowed = selectedPackage.count;
+    const currentCount = localFiles.length;
+    const remaining = Math.max(0, totalAllowed - currentCount);
     
-    try {
-      const totalAllowed = selectedPackage.count;
-      const currentCount = uploadedPhotos.length;
-      const remaining = Math.max(0, totalAllowed - currentCount);
-      
-      const filesToUpload = Array.from(files).slice(0, remaining);
-      
-      if (remaining === 0) {
-        alert(`Hai già raggiunto il limite di ${totalAllowed} foto.`);
-        setIsUploading(false);
-        return;
-      }
-
-      const uploadPromises = filesToUpload.map(async (file) => {
-        const url = await uploadToCloudinary(file);
-        return {
-          id: Math.random().toString(36).substr(2, 9),
-          name: file.name,
-          size: file.size,
-          url: url
-        };
-      });
-
-      const newPhotoFiles = await Promise.all(uploadPromises);
-      setUploadedPhotos(prev => [...prev, ...newPhotoFiles]);
-      
-    } catch (error) {
-      console.log("Upload error detail:", error);
-      alert("Si è verificato un errore durante il caricamento delle immagini.");
-    } finally {
-      setIsUploading(false);
+    const filesToAdd = newFiles.slice(0, remaining);
+    
+    if (remaining === 0) {
+      alert(`Hai già raggiunto il limite di ${totalAllowed} foto.`);
+      return;
     }
+
+    setLocalFiles(prev => [...prev, ...filesToAdd]);
+    
+    const newPreviews: PhotoFile[] = filesToAdd.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      size: file.size,
+      url: URL.createObjectURL(file)
+    }));
+    
+    setUploadedPhotos(prev => [...prev, ...newPreviews]);
   };
 
-  const handleSaveOrder = async () => {
-    if (!selectedPackage || uploadedPhotos.length === 0) return;
+  const handleSubmit = async (e: React.MouseEvent | React.FormEvent) => {
+    if (e) e.preventDefault();
+    // 1) Dentro handleSubmit: console.log("Submit started")
+    console.log("Submit started");
+
+    if (!selectedPackage || localFiles.length === 0) {
+      console.log("Missing package or files. localFiles count:", localFiles.length);
+      return;
+    }
     
-    setIsSaving(true);
+    setIsUploading(true);
     const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
+      // 2) Prima dell’upload: console.log("Files selected:", files)
+      console.log("Files selected:", localFiles);
+
+      const finalPhotoFiles: PhotoFile[] = [];
+      
+      for (const file of localFiles) {
+        const secureUrl = await uploadToCloudinary(file);
+        finalPhotoFiles.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          size: file.size,
+          url: secureUrl
+        });
+      }
+
+      // 7) Dopo upload di tutte le immagini: console.log("All URLs:", uploadedUrls)
+      console.log("All URLs:", finalPhotoFiles.map(f => f.url));
+
       const newOrder: Order = {
         id: orderId,
         userId: user.id,
@@ -112,44 +121,50 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         userEmail: user.email,
         packageId: selectedPackage.id,
         packageName: selectedPackage.name,
-        photos: uploadedPhotos,
+        photos: finalPhotoFiles,
         status: OrderStatus.PENDING_PAYMENT, 
         paymentMethod: PaymentMethod.ONLINE_SUMUP,
         createdAt: new Date().toISOString(),
         total: selectedPackage.price
       };
 
-      // SALVATAGGIO IMMEDIATO SU SUPABASE PRIMA DEL PAGAMENTO
+      // 8) Prima di salvare su Supabase: console.log("Saving to Supabase...")
+      console.log("Saving to Supabase...");
+      
       await addOrder(newOrder);
+      
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setLocalFiles([]);
+      setUploadedPhotos([]);
+      
+      alert("Foto inviate con successo!");
       
       setCurrentOrderId(orderId);
       setShowCheckout(true);
       
       EmailService.sendOrderConfirmation(newOrder);
-    } catch (error) {
-      console.log("Error saving order to Supabase:", error);
+    } catch (error: any) {
+      // 11) In catch: console.error("FINAL ERROR:", error)
+      console.error("FINAL ERROR:", error);
+      alert(error.message || "Si è verificato un errore durante l'invio delle foto.");
     } finally {
-      setIsSaving(false);
+      setIsUploading(false);
     }
   };
 
   const finalizePayment = async () => {
     if (!currentOrderId) return;
 
-    // Apertura finestra SumUp
     const paymentWindow = window.open(SUMUP_PAY_LINK, '_blank');
-    
     setIsFinalizing(true);
 
     try {
-      // Se l'utente clicca "Paga", aggiorniamo lo status in Supabase a "paid"
       await updateStatus(currentOrderId, OrderStatus.PAID);
 
       if (!paymentWindow || paymentWindow.closed || typeof paymentWindow.closed === 'undefined') {
         window.open(SUMUP_PAY_LINK, '_blank');
       }
       
-      setUploadedPhotos([]);
       setShowCheckout(false);
       setCurrentOrderId(null);
       alert("Pagamento avviato! Il tuo ordine è stato registrato.");
@@ -169,6 +184,11 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       case OrderStatus.COLLECTED: return 'bg-emerald-100 text-emerald-700';
       default: return 'bg-gray-100 text-gray-700';
     }
+  };
+
+  const handleRemovePhoto = (id: string, index: number) => {
+    setUploadedPhotos(prev => prev.filter(p => p.id !== id));
+    setLocalFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -200,7 +220,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                   <div className="flex-grow">
                     <h4 className="font-bold text-lg md:text-xl uppercase tracking-tighter">{selectedPackage.name}</h4>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                      {uploadedPhotos.length} / {selectedPackage.count} foto caricate
+                      {uploadedPhotos.length} / {selectedPackage.count} foto selezionate
                     </p>
                   </div>
                 </div>
@@ -209,18 +229,18 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                   onClick={() => !isUploading && fileInputRef.current?.click()}
                   className={`border-2 border-dashed rounded-[40px] p-8 md:p-16 text-center cursor-pointer transition-all ${isUploading ? 'bg-gray-100 opacity-70 pointer-events-none' : 'hover:bg-gray-50/80 hover:border-black bg-gray-50/30 border-gray-200'}`}
                 >
-                  <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                  <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileSelect} />
                   {isUploading ? (
                     <div className="flex flex-col items-center">
                         <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Caricamento su Cloudinary...</p>
+                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Invio in corso (Cloudinary)...</p>
                     </div>
                   ) : (
                     <>
                         <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-6 text-black border border-gray-100">
                           <i className="fas fa-upload text-xl md:text-2xl"></i>
                         </div>
-                        <h4 className="font-bold text-base md:text-lg mb-2 text-black uppercase tracking-widest">Carica i tuoi file</h4>
+                        <h4 className="font-bold text-base md:text-lg mb-2 text-black uppercase tracking-widest">Seleziona i tuoi file</h4>
                         <p className="text-xs text-gray-400 font-medium">Tocca per selezionare le immagini (JPG/PNG).</p>
                     </>
                   )}
@@ -228,12 +248,14 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
 
                 {uploadedPhotos.length > 0 && (
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                    {uploadedPhotos.map(photo => (
+                    {uploadedPhotos.map((photo, index) => (
                       <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 shadow-sm">
                         <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
-                        <button onClick={(e) => { e.stopPropagation(); setUploadedPhotos(prev => prev.filter(p => p.id !== photo.id)); }} className="absolute top-1 right-1 bg-black/80 text-white w-6 h-6 rounded-full shadow-md flex items-center justify-center">
-                          <i className="fas fa-times text-[8px]"></i>
-                        </button>
+                        {!isUploading && (
+                          <button onClick={(e) => { e.stopPropagation(); handleRemovePhoto(photo.id, index); }} className="absolute top-1 right-1 bg-black/80 text-white w-6 h-6 rounded-full shadow-md flex items-center justify-center">
+                            <i className="fas fa-times text-[8px]"></i>
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -243,11 +265,11 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                   <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
                     <p className="text-xl md:text-2xl font-serif font-bold text-black italic">Totale: €{selectedPackage.price}</p>
                     <button 
-                      onClick={handleSaveOrder} 
-                      disabled={isSaving || isUploading}
+                      onClick={handleSubmit} 
+                      disabled={isUploading}
                       className="w-full sm:w-auto px-12 py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
                     >
-                      {isSaving ? 'Salvataggio...' : 'Invia Foto e Procedi'}
+                      {isUploading ? 'Invio in corso...' : 'Invia Foto e Procedi'}
                     </button>
                   </div>
                 )}
@@ -255,7 +277,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
             ) : (
               <div className="space-y-8 py-4">
                 <div className="text-center mb-10">
-                   <h3 className="text-2xl md:text-3xl font-serif mb-4">File Caricati Correttamente!</h3>
+                   <h3 className="text-2xl md:text-3xl font-serif mb-4">Ordine Registrato Correttamente!</h3>
                    <p className="text-gray-500 italic text-sm">Il tuo ordine è stato salvato in Supabase. Completa il pagamento per avviare la stampa professionale.</p>
                 </div>
                 

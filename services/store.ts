@@ -125,16 +125,21 @@ export const useStore = () => {
       package: order.packageName,
       photo_urls: order.photos.map(p => p.url),
       status: order.status, // Sarà "pending"
-      payment_method: order.paymentMethod,
+      // Fix: order.payment_method was used instead of order.paymentMethod (from Order interface)
+      payment_method: order.paymentMethod || PaymentMethod.ONLINE_SUMUP,
       total: order.total,
       created_at: new Date().toISOString()
     };
 
-    const { error } = await supabase.from('orders').insert([dbOrder]);
+    const result = await supabase.from('orders').insert([dbOrder]);
 
-    if (error) {
-      console.log("Errore reale inserimento Supabase:", error);
-      throw error;
+    // 9) Dopo insert: console.log("Supabase response:", result)
+    console.log("Supabase response:", result);
+
+    if (result.error) {
+      // 10) Se Supabase error: console.error("Supabase error:", error); throw error
+      console.error("Supabase error:", result.error);
+      throw result.error;
     }
 
     // Refresh ordini dopo inserimento
