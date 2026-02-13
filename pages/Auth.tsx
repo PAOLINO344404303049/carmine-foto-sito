@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState, type FC } from 'react';
 import { User } from '../types';
 
 interface AuthProps {
@@ -8,7 +9,7 @@ interface AuthProps {
   onLogin: (email: string, pass: string) => User;
 }
 
-const Auth: React.FC<AuthProps> = ({ mode, navigate, onLogin }) => {
+const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -16,7 +17,6 @@ const Auth: React.FC<AuthProps> = ({ mode, navigate, onLogin }) => {
     e.preventDefault();
     if (email && password) {
       const user = onLogin(email, password);
-      // Se è admin, naviga direttamente alla dashboard admin
       if (user.role === 'admin') {
         navigate('admin');
       } else {

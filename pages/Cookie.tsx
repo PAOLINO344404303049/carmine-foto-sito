@@ -1,6 +1,8 @@
-import React from 'react';
 
-const Cookie: React.FC = () => {
+import * as React from 'react';
+import { type FC } from 'react';
+
+const Cookie: FC = () => {
   return (
     <div className="py-24 px-6 bg-white min-h-screen">
       <div className="max-w-4xl mx-auto">
@@ -15,14 +17,6 @@ const Cookie: React.FC = () => {
           <section>
             <h2 className="text-xl font-serif text-black mb-4 italic">Cosa sono i cookie</h2>
             <p>I cookie sono piccoli file di testo salvati sul dispositivo dell’utente.</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-serif text-black mb-4 italic">Tipologie di cookie utilizzate</h2>
-            <ul className="list-disc pl-5 space-y-2">
-              <li><strong>Cookie tecnici:</strong> necessari al funzionamento del sito.</li>
-              <li><strong>Eventuali cookie analitici:</strong> anonimizzati per migliorare l’esperienza utente.</li>
-            </ul>
           </section>
 
           <section>

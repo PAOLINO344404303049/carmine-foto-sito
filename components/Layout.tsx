@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+
+import * as React from 'react';
+import { useState, useEffect, type FC, type ReactNode } from 'react';
 import { APP_NAME, STUDIO_ADDRESS, STUDIO_PHONE, INSTAGRAM_URL, LOGO_URL, WHATSAPP_LINK } from '../constants';
 import { User } from '../types';
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   user: User | null;
   onLogout: () => void;
   navigate: (page: string) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
+const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Lock body scroll when menu is open
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -28,11 +29,8 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, navigate }) =
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-white">
-      {/* Navigation - Urgent Visibility Fix */}
       <nav className="fixed top-0 left-0 w-full z-[9999] bg-black/80 lg:bg-white border-b border-white/10 lg:border-gray-100 px-4 md:px-6 py-2 md:py-4 shadow-lg transition-colors">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          
-          {/* Logo */}
           <div 
             className="cursor-pointer flex items-center group shrink-0"
             onClick={() => handleNav('home')}
@@ -44,7 +42,6 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, navigate }) =
             />
           </div>
 
-          {/* Desktop Menu */}
           <div className="hidden lg:flex items-center space-x-10 text-[13px] font-bold uppercase tracking-[0.2em] text-gray-500">
             <button onClick={() => handleNav('home')} className="hover:text-black transition-colors">Home</button>
             <button onClick={() => handleNav('portfolio')} className="hover:text-black transition-colors">Portfolio</button>
@@ -52,7 +49,6 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, navigate }) =
             <button onClick={() => handleNav('contact')} className="hover:text-black transition-colors">Contatti</button>
           </div>
 
-          {/* Right Actions */}
           <div className="flex items-center space-x-4">
             <div className="hidden lg:block">
               {user ? (
@@ -72,14 +68,12 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, navigate }) =
               )}
             </div>
 
-            {/* Hamburger Toggle - FIX VISIBILITÀ (URGENTISSIMO) */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden w-12 h-12 flex items-center justify-center bg-black rounded-xl z-[10001] relative border-none outline-none"
               aria-label="Menu"
             >
               <div className="relative w-6 h-5">
-                {/* Tre linee bianche, 28px visual equivalent size, high contrast */}
                 <span className={`absolute block h-0.5 w-6 bg-white transform transition duration-300 ease-in-out ${isMobileMenuOpen ? 'rotate-45 top-2' : 'top-0'}`}></span>
                 <span className={`absolute block h-0.5 w-6 bg-white transform transition duration-300 ease-in-out top-2 ${isMobileMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
                 <span className={`absolute block h-0.5 w-6 bg-white transform transition duration-300 ease-in-out ${isMobileMenuOpen ? '-rotate-45 top-2' : 'top-4'}`}></span>
@@ -88,7 +82,6 @@ const Layout: React.FC<LayoutProps> = ({ children, user, onLogout, navigate }) =
           </div>
         </div>
 
-        {/* Mobile Menu Overlay - Full Screen Opaque Black */}
         <div 
           className={`lg:hidden fixed inset-0 bg-black z-[10000] transition-all duration-500 ease-in-out transform ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
         >

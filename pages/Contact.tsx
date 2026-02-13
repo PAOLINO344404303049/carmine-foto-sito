@@ -1,23 +1,22 @@
 
-import React from 'react';
+import * as React from 'react';
+import { type FC } from 'react';
 import { STUDIO_ADDRESS, STUDIO_PHONE, STUDIO_EMAIL, INSTAGRAM_URL, WHATSAPP_LINK } from '../constants';
 
-const Contact: React.FC = () => {
+const Contact: FC = () => {
   return (
     <div className="py-24 px-6 bg-white min-h-screen">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20">
-        
         <div className="space-y-12">
           <div>
             <span className="text-xs font-bold uppercase tracking-widest text-gray-400 block mb-4">Contatti</span>
             <h1 className="text-4xl md:text-5xl font-serif mb-8">Passa a trovarci in studio.</h1>
             <p className="text-gray-500 leading-relaxed max-w-md">
-              Il nostro studio è aperto dal Lunedì al Sabato. Ti aspettiamo per il ritiro dei tuoi ricordi o per pianificare il tuo prossimo servizio fotografico.
+              Il nostro studio è aperto dal Lunedì al Sabati. Ti aspettiamo per il ritiro dei tuoi ricordi o per pianificare il tuo prossimo servizio fotografico.
             </p>
           </div>
 
           <div className="space-y-6">
-            {/* Box Indirizzo */}
             <div className="flex items-start space-x-6 p-6 border border-gray-50 rounded-3xl hover:bg-gray-50 transition-colors">
               <div className="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center flex-shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 fill-current" viewBox="0 0 24 24">
@@ -30,7 +29,6 @@ const Contact: React.FC = () => {
               </div>
             </div>
             
-            {/* Box WhatsApp */}
             <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="flex items-start space-x-6 p-6 border border-gray-50 rounded-3xl hover:bg-green-50 transition-colors group">
               <div className="w-12 h-12 bg-[#25D366] text-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform">
                 <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
@@ -43,7 +41,6 @@ const Contact: React.FC = () => {
               </div>
             </a>
 
-            {/* Box Instagram */}
             <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="flex items-start space-x-6 p-6 border border-gray-50 rounded-3xl hover:bg-purple-50 transition-colors group">
               <div className="w-12 h-12 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] text-white rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-110 transition-transform">
                 <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
@@ -79,11 +76,7 @@ const Contact: React.FC = () => {
               Invia Email
             </button>
           </form>
-          <div className="mt-8 text-center text-xs text-gray-400 italic">
-            Oppure clicca il pulsante WhatsApp in basso a destra per una risposta immediata.
-          </div>
         </div>
-
       </div>
     </div>
   );

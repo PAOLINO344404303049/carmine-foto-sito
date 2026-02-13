@@ -1,5 +1,6 @@
 
-import React from 'react';
+import * as React from 'react';
+import { type FC } from 'react';
 import { PRINT_PACKAGES } from '../constants';
 import { User } from '../types';
 
@@ -8,7 +9,7 @@ interface PackagesProps {
   user: User | null;
 }
 
-const Packages: React.FC<PackagesProps> = ({ navigate, user }) => {
+const Packages: FC<PackagesProps> = ({ navigate, user }) => {
   return (
     <div className="py-24 px-4 md:px-6 bg-white min-h-screen">
       <div className="max-w-7xl mx-auto">

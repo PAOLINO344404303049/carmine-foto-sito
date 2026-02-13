@@ -1,5 +1,6 @@
 
-import React, { useState, useRef } from 'react';
+import * as React from 'react';
+import { useState, useRef, type FC } from 'react';
 import { User, PhotoPackage, PhotoFile, Order, OrderStatus, PaymentMethod } from '../types';
 import { PRINT_PACKAGES, SUMUP_PAY_LINK } from '../constants';
 import { EmailService } from '../services/email';
@@ -7,7 +8,7 @@ import { EmailService } from '../services/email';
 interface DashboardProps {
   user: User;
   orders: Order[];
-  addOrder: (order: Order) => void;
+  addOrder: (order: Order) => Promise<void>;
   navigate: (page: string) => void;
   onLogout: () => void;
 }
@@ -15,7 +16,7 @@ interface DashboardProps {
 const CLOUDINARY_UPLOAD_PRESET = 'fotocs';
 const CLOUDINARY_CLOUD_NAME = 'divyx0t5b';
 
-const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLogout }) => {
+const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLogout }) => {
   const [selectedPackage, setSelectedPackage] = useState<PhotoPackage | null>(PRINT_PACKAGES.length === 1 ? PRINT_PACKAGES[0] : null);
   const [uploadedPhotos, setUploadedPhotos] = useState<PhotoFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -33,7 +34,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
       body: formData,
     });
 
-    if (!response.ok) throw new Error('Errore durante l\'upload su Cloudinary');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Cloudinary response error:', errorText);
+      throw new Error('Errore durante l\'upload su Cloudinary');
+    }
     const data = await response.json();
     return data.secure_url;
   };
@@ -81,7 +86,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
   const finalizeOrder = async () => {
     if (!selectedPackage || uploadedPhotos.length === 0) return;
 
-    // APERTURA IMMEDIATA LINK SUMUP (per evitare blocchi pop-up e latenza)
     const paymentWindow = window.open(SUMUP_PAY_LINK, '_blank');
     
     setIsFinalizing(true);
@@ -102,20 +106,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
       };
 
       await addOrder(newOrder);
-      
-      // Invio Email di Conferma
-      EmailService.sendOrderConfirmation(newOrder);
+      await EmailService.sendOrderConfirmation(newOrder);
 
-      // Se il popup è stato bloccato, apriamolo ora
       if (!paymentWindow || paymentWindow.closed || typeof paymentWindow.closed === 'undefined') {
         window.open(SUMUP_PAY_LINK, '_blank');
       }
       
       setUploadedPhotos([]);
       setShowCheckout(false);
-      alert("Pratica inviata con successo! Le tue foto sono state salvate e l'ordine è in attesa. Riceverai una mail di conferma.");
+      alert("Ordine inviato con successo! Riceverai una mail di conferma brevemente.");
     } catch (error) {
-      alert("Errore durante il salvataggio dell'ordine su Supabase.");
+      console.error("Order finalization error:", error);
+      alert("Errore durante il salvataggio dell'ordine.");
     } finally {
       setIsFinalizing(false);
     }
@@ -134,11 +136,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
   return (
     <div className="py-12 px-4 md:px-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
-        
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white p-6 md:p-12 rounded-[40px] shadow-sm border border-gray-100">
             <h2 className="text-2xl md:text-3xl font-serif mb-8 text-black">Il tuo Ordine</h2>
-            
             {!selectedPackage ? (
               <div className="space-y-6">
                 <p className="text-gray-500 mb-6 font-bold uppercase tracking-widest text-[10px]">1. Seleziona il pacchetto</p>

@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Auth from './pages/Auth';
@@ -52,7 +53,6 @@ const App: React.FC = () => {
         return store.user ? (
           <Dashboard 
             user={store.user} 
-            // store.orders è già filtrato lato backend/store per l'utente loggato via email
             orders={store.orders}
             addOrder={store.addOrder}
             navigate={navigate}

@@ -1,14 +1,15 @@
-import React from 'react';
+
+import * as React from 'react';
+import { type FC } from 'react';
 import { WHATSAPP_LINK, HERO_BG_URL, SERVICE_IMG_PRINT, SERVICE_IMG_100, SERVICE_IMG_CONSULT, INSTAGRAM_URL, LOGO_URL } from '../constants';
 
 interface HomeProps {
   navigate: (page: string) => void;
 }
 
-const Home: React.FC<HomeProps> = ({ navigate }) => {
+const Home: FC<HomeProps> = ({ navigate }) => {
   return (
     <div className="bg-white">
-      {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
           <img 
@@ -18,7 +19,6 @@ const Home: React.FC<HomeProps> = ({ navigate }) => {
           />
         </div>
         <div className="relative z-10 text-center px-6 max-w-5xl flex flex-col items-center">
-          {/* Logo istituzionale */}
           <div className="animate-fade-in transition-transform hover:scale-105 duration-700">
             <img 
               src={LOGO_URL} 
@@ -26,12 +26,9 @@ const Home: React.FC<HomeProps> = ({ navigate }) => {
               className="h-24 md:h-60 w-auto mb-8 brightness-0 invert object-contain"
             />
           </div>
-          
-          {/* Descrizione */}
           <p className="text-sm md:text-lg text-white mb-12 font-bold max-w-xl mx-auto leading-relaxed tracking-wide animate-fade-in-up">
             Carica le tue foto, scegli il pacchetto e ritira le stampe in studio. <br className="hidden md:block" /> La qualità professionale a portata di click.
           </p>
-
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
             <button 
               onClick={() => navigate('dashboard')}
@@ -47,23 +44,18 @@ const Home: React.FC<HomeProps> = ({ navigate }) => {
             </button>
           </div>
         </div>
-        
-        {/* Scroll Indicator */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-white/40 animate-bounce">
           <i className="fas fa-chevron-down"></i>
         </div>
       </section>
 
-      {/* Sezione Servizi Principali */}
       <section id="services" className="py-24 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-serif mb-4 text-black italic">I Nostri Servizi</h2>
             <div className="w-20 h-1 bg-black mx-auto"></div>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {/* Servizio 1 */}
             <div className="group cursor-pointer" onClick={() => navigate('dashboard')}>
               <div className="relative overflow-hidden rounded-[40px] aspect-[4/5] mb-6 shadow-xl">
                 <img src={SERVICE_IMG_PRINT} alt="Stampa Foto" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -73,8 +65,6 @@ const Home: React.FC<HomeProps> = ({ navigate }) => {
               <p className="text-gray-500 text-sm leading-relaxed mb-4 italic">Stampe di alta qualità su carta lucida professionale. Colori vibranti e neri profondi per i tuoi ricordi.</p>
               <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black pb-1 group-hover:pr-4 transition-all italic">Scegli Formato →</span>
             </div>
-
-            {/* Servizio 2 */}
             <div className="group cursor-pointer" onClick={() => navigate('packages')}>
               <div className="relative overflow-hidden rounded-[40px] aspect-[4/5] mb-6 shadow-xl">
                 <img src={SERVICE_IMG_100} alt="Pacchetto 100 Foto" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -84,8 +74,6 @@ const Home: React.FC<HomeProps> = ({ navigate }) => {
               <p className="text-gray-500 text-sm leading-relaxed mb-4 italic">La nostra offerta più popolare. 100 stampe professionali ad un prezzo imbattibile per i tuoi eventi.</p>
               <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black pb-1 group-hover:pr-4 transition-all italic">Vedi Offerta →</span>
             </div>
-
-            {/* Servizio 3 */}
             <div className="group cursor-pointer" onClick={() => navigate('contact')}>
               <div className="relative overflow-hidden rounded-[40px] aspect-[4/5] mb-6 shadow-xl">
                 <img src={SERVICE_IMG_CONSULT} alt="Consulenza" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -99,14 +87,11 @@ const Home: React.FC<HomeProps> = ({ navigate }) => {
         </div>
       </section>
 
-      {/* CTA Finale */}
       <section className="py-32 px-6 bg-gray-50 text-center">
         <div className="max-w-4xl mx-auto bg-black p-16 md:p-24 rounded-[60px] shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-          
           <h2 className="text-3xl md:text-5xl font-serif text-white mb-8 relative z-10 italic">Pronto a stampare i tuoi momenti migliori?</h2>
           <p className="text-gray-400 mb-12 relative z-10 max-w-xl mx-auto text-lg italic font-light">Unisciti ai nostri clienti e trasforma i tuoi pixel in carta di alta qualità.</p>
-          
           <div className="flex flex-col items-center gap-8 relative z-10">
             <button 
               onClick={() => navigate('dashboard')}
@@ -114,7 +99,6 @@ const Home: React.FC<HomeProps> = ({ navigate }) => {
             >
               Inizia Ora
             </button>
-            
             <div className="flex items-center gap-10">
                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#25D366] transition-colors text-3xl">
                   <i className="fab fa-whatsapp"></i>

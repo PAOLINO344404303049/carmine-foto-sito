@@ -1,15 +1,15 @@
 
-import React from 'react';
+import * as React from 'react';
+import { type FC } from 'react';
 import { PORTFOLIO_BG_URL, CARMINE_PHOTO_URL } from '../constants';
 
 interface PortfolioProps {
   navigate: (page: string) => void;
 }
 
-const Portfolio: React.FC<PortfolioProps> = ({ navigate }) => {
+const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
-      {/* Background Image with Overlay */}
       <div className="fixed inset-0 z-0">
         <img 
           src={PORTFOLIO_BG_URL} 
@@ -19,12 +19,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ navigate }) => {
         <div className="absolute inset-0 bg-black/80 backdrop-blur-[4px]"></div>
       </div>
 
-      {/* Main Content Container */}
       <div className="relative z-10 w-full max-w-6xl px-4 py-20 md:py-32">
         <div className="bg-white/5 backdrop-blur-xl rounded-[40px] md:rounded-[60px] border border-white/10 shadow-2xl overflow-hidden animate-fade-in-up">
           <div className="flex flex-col md:flex-row items-stretch">
-            
-            {/* Left side: Photo (Responsive Column) */}
             <div className="w-full md:w-5/12 lg:w-4/12 relative">
               <div className="h-80 md:h-full min-h-[400px] overflow-hidden">
                 <img 
@@ -32,12 +29,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ navigate }) => {
                   alt="Carmine Felice Napolitano" 
                   className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700 hover:scale-105"
                 />
-                {/* Visual Gradient on top of photo for mobile blending */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent md:hidden"></div>
               </div>
             </div>
 
-            {/* Right side: Biography Text */}
             <div className="w-full md:w-7/12 lg:w-8/12 p-8 md:p-16 flex flex-col justify-center">
               <div className="mb-8">
                 <span className="text-white/40 text-[10px] font-bold uppercase tracking-[0.5em] mb-4 block">Profilo Professionale</span>
@@ -49,23 +44,18 @@ const Portfolio: React.FC<PortfolioProps> = ({ navigate }) => {
                 <p>
                   Sono <strong className="text-white font-bold">Carmine Felice Napolitano</strong>, fotografo specializzato in matrimoni ed eventi, e da ben 12 anni mi immergo con passione e dedizione nel meraviglioso mondo della fotografia.
                 </p>
-                
                 <p>
                   Per me, la fotografia non è solo un lavoro, ma una vera e propria vocazione. Ogni scatto che catturo racconta una storia, trasmette un'emozione e testimonia un momento prezioso nella vita delle persone che fotografo.
                 </p>
-
                 <p>
                   La mia esperienza nel settore wedding ed eventi mi ha permesso di affinare le mie abilità nel catturare istanti unici e irripetibili, dando vita a immagini che narrano con autenticità e stile il vostro giorno speciale.
                 </p>
-
                 <p>
-                  Ambizioso e determinato, mi impegno costantemente per migliorare le mie capacità e offrire ai miei clienti servizi sempre più eccellenti ed emozionanti. Ogni progetto rappresenta per me una sfida da affrontare con entusiasmo e professionalità, mettendo tutto me stesso in ogni singolo scatto.
+                  Ambizioso e determinato, mi impegno costantemente per migliorare le mie capacità e offrire ai miei clienti servizi sempre più eccellenti ed emozionanti.
                 </p>
-
                 <p>
-                  Il mio approccio alla fotografia si ispira allo stile reportage, dove la spontaneità e l'autenticità sono al centro di ogni immagine. Amo cogliere i momenti più naturali e sinceri, quelli che rendono unico ogni evento e che resteranno impressi nei vostri ricordi per sempre.
+                  Il mio approccio alla fotografia si ispira allo stile reportage, dove la spontaneità e l'autenticità sono al centro di ogni immagine.
                 </p>
-
                 <p className="pt-6 border-t border-white/10 italic text-white/80">
                   Spero di avere l'opportunità di condividere con voi la mia passione per la fotografia e di poter catturare insieme momenti indimenticabili.
                 </p>
@@ -92,14 +82,8 @@ const Portfolio: React.FC<PortfolioProps> = ({ navigate }) => {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
-      </div>
-      
-      {/* Scroll indicator for mobile text content */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 text-white/20 animate-bounce md:hidden">
-        <i className="fas fa-chevron-down text-xl"></i>
       </div>
     </div>
   );

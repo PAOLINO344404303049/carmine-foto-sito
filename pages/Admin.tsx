@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState, type FC } from 'react';
 import { Order, OrderStatus } from '../types';
-import JSZip from 'jszip';
+import * as JSZip from 'jszip';
 import { EmailService } from '../services/email';
 
 interface AdminProps {
@@ -11,7 +12,7 @@ interface AdminProps {
   onLogout: () => void;
 }
 
-const Admin: React.FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) => {
+const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) => {
   const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
@@ -21,7 +22,6 @@ const Admin: React.FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogo
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     updateStatus(orderId, newStatus);
     
-    // Se lo stato è "Stampato" (Pronto per il ritiro), invia email
     if (newStatus === OrderStatus.PRINTED) {
       const order = orders.find(o => o.id === orderId);
       if (order) {
@@ -51,7 +51,9 @@ const Admin: React.FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogo
     setDownloadProgress(0);
     
     try {
-      const zip = new JSZip();
+      // Gestione sicura del costruttore JSZip in ambiente ESM
+      const JSZipConstructor = (JSZip as any).default || JSZip;
+      const zip = new JSZipConstructor();
       const folder = zip.folder(`${order.id}_${order.userName.replace(/\s+/g, '_')}`);
       
       let processedCount = 0;
