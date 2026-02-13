@@ -1,11 +1,25 @@
 
 import { useState, useEffect } from 'react';
-import { User, Order, OrderStatus } from '../types';
+import { User, Order, OrderStatus, PaymentMethod } from '../types';
 import { supabase } from './supabase';
 
 const AUTH_KEY = 'studio_auth_v2';
 const ADMIN_EMAIL = "carminephotography0@gmail.com";
 const ADMIN_PASS = "Carmine01.";
+
+// Definizione del tipo per il database Supabase come richiesto
+interface SupabaseOrder {
+  id?: string;
+  customer_name: string;
+  customer_email: string;
+  package: string;
+  photo_urls: string[];
+  status: string;
+  created_at?: string;
+  user_id?: string;
+  payment_method?: string;
+  total?: number;
+}
 
 export const useStore = () => {
   const [user, setUser] = useState<User | null>(() => {
@@ -31,19 +45,20 @@ export const useStore = () => {
     
     // Se non è admin, filtra per la propria email
     if (user.role !== 'admin') {
-      query = query.eq('user_email', user.email);
+      query = query.eq('customer_email', user.email);
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
 
     if (!error && data) {
-      const mappedOrders: Order[] = data.map(item => ({
-        id: item.id,
-        userId: item.user_id,
+      // Tipizzazione esplicita dell'item per evitare 'any' implicito
+      const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item: SupabaseOrder) => ({
+        id: item.id || '',
+        userId: item.user_id || '',
         userName: item.customer_name,
-        userEmail: item.user_email,
-        packageId: item.package_id,
-        packageName: item.package_name,
+        userEmail: item.customer_email,
+        packageId: item.package || '',
+        packageName: item.package,
         photos: item.photo_urls.map((url: string, index: number) => ({
           id: `photo-${index}`,
           name: `Foto ${index + 1}`,
@@ -51,16 +66,16 @@ export const useStore = () => {
           size: 0
         })),
         status: item.status as OrderStatus,
-        paymentMethod: item.payment_method,
-        createdAt: item.created_at,
-        total: item.total
+        paymentMethod: (item.payment_method as PaymentMethod) || PaymentMethod.ONLINE_SUMUP,
+        createdAt: item.created_at || new Date().toISOString(),
+        total: item.total || 0
       }));
       setOrders(mappedOrders);
     }
     setLoading(false);
   };
 
-  const login = (email: string, pass: string) => {
+  const login = (email: string, pass: string): User => {
     if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
       const adminUser: User = {
         id: 'admin_primary',
@@ -94,19 +109,20 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    const { error } = await supabase.from('orders').insert([{
+    // Mapping dell'ordine verso lo schema richiesto per Supabase
+    const dbOrder: SupabaseOrder = {
       id: order.id,
       user_id: order.userId,
       customer_name: order.userName,
-      user_email: order.userEmail,
-      package_id: order.packageId,
-      package_name: order.packageName,
+      customer_email: order.userEmail,
+      package: order.packageName,
       photo_urls: order.photos.map(p => p.url),
       status: order.status,
       payment_method: order.paymentMethod,
-      total: order.total,
-      created_at: new Date().toISOString()
-    }]);
+      total: order.total
+    };
+
+    const { error } = await supabase.from('orders').insert([dbOrder]);
 
     if (!error) {
       await fetchOrders();
