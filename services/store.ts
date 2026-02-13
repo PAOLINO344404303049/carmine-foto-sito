@@ -9,7 +9,7 @@ const ADMIN_PASS = "Carmine01.";
 
 /**
  * Definizione esplicita dell'interfaccia per gli ordini su Supabase
- * come richiesto per garantire la compatibilità del build.
+ * Allineata alle richieste del backend.
  */
 interface SupabaseOrder {
   id?: string;
@@ -46,6 +46,7 @@ export const useStore = () => {
     try {
       let query = supabase.from('orders').select('*');
       
+      // Filtro per email per garantire visibilità su qualsiasi dispositivo
       if (user.role !== 'admin') {
         query = query.eq('customer_email', user.email);
       }
@@ -53,13 +54,12 @@ export const useStore = () => {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (!error && data) {
-        // Tipizzazione esplicita per evitare implicit 'any'
         const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item: SupabaseOrder) => ({
           id: item.id || '',
           userId: item.user_id || '',
           userName: item.customer_name,
           userEmail: item.customer_email,
-          packageId: item.package, // Usiamo il nome del pacchetto come ID per semplicità
+          packageId: item.package, 
           packageName: item.package,
           photos: (item.photo_urls || []).map((url: string, index: number) => ({
             id: `photo-${index}`,
@@ -115,7 +115,6 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    // Definizione dell'ordine per il database
     const dbOrder: SupabaseOrder = {
       id: order.id,
       user_id: order.userId,

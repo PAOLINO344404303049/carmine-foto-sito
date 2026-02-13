@@ -80,6 +80,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
 
   const finalizeOrder = async () => {
     if (!selectedPackage || uploadedPhotos.length === 0) return;
+
+    // APERTURA IMMEDIATA LINK SUMUP (per evitare blocchi pop-up e latenza)
+    const paymentWindow = window.open(SUMUP_PAY_LINK, '_blank');
+    
     setIsFinalizing(true);
 
     try {
@@ -102,13 +106,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
       // Invio Email di Conferma
       EmailService.sendOrderConfirmation(newOrder);
 
-      window.open(SUMUP_PAY_LINK, '_blank');
+      // Se il popup è stato bloccato, apriamolo ora
+      if (!paymentWindow || paymentWindow.closed || typeof paymentWindow.closed === 'undefined') {
+        window.open(SUMUP_PAY_LINK, '_blank');
+      }
       
       setUploadedPhotos([]);
       setShowCheckout(false);
-      alert("Pratica inviata con successo! Le tue foto sono state salvate nel database. Abbiamo inviato una mail di conferma a " + user.email + ".");
+      alert("Pratica inviata con successo! Le tue foto sono state salvate e l'ordine è in attesa. Riceverai una mail di conferma.");
     } catch (error) {
-      alert("Errore durante il salvataggio dell'ordine.");
+      alert("Errore durante il salvataggio dell'ordine su Supabase.");
     } finally {
       setIsFinalizing(false);
     }

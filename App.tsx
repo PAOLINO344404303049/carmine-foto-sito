@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -51,7 +52,8 @@ const App: React.FC = () => {
         return store.user ? (
           <Dashboard 
             user={store.user} 
-            orders={store.orders.filter(o => o.userId === store.user?.id)}
+            // store.orders è già filtrato lato backend/store per l'utente loggato via email
+            orders={store.orders}
             addOrder={store.addOrder}
             navigate={navigate}
             onLogout={handleLogout}
@@ -89,7 +91,7 @@ const App: React.FC = () => {
         {renderPage()}
       </Layout>
       
-      {/* Floating WhatsApp Button - Cerchio in basso alla pagina */}
+      {/* Floating WhatsApp Button */}
       <a 
         href={WHATSAPP_LINK}
         target="_blank"
