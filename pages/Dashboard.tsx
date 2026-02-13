@@ -39,7 +39,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Cloudinary response error:', errorText);
+      console.log('Cloudinary response error:', errorText);
       throw new Error('Errore durante l\'upload su Cloudinary');
     }
     const data = await response.json();
@@ -79,7 +79,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       setUploadedPhotos(prev => [...prev, ...newPhotoFiles]);
       
     } catch (error) {
-      console.error("Upload error:", error);
+      console.log("Upload error detail:", error);
       alert("Si è verificato un errore durante il caricamento delle immagini.");
     } finally {
       setIsUploading(false);
@@ -101,23 +101,21 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         packageId: selectedPackage.id,
         packageName: selectedPackage.name,
         photos: uploadedPhotos,
-        status: OrderStatus.PENDING_PAYMENT,
+        status: OrderStatus.PENDING_PAYMENT, // Questo mappa a "pending" nel DB
         paymentMethod: PaymentMethod.ONLINE_SUMUP,
         createdAt: new Date().toISOString(),
         total: selectedPackage.price
       };
 
-      // Salvataggio immediato in Supabase (stato "In sospeso")
+      // SALVATAGGIO IMMEDIATO SU SUPABASE PRIMA DEL PAGAMENTO
       await addOrder(newOrder);
+      
       setCurrentOrderId(orderId);
       setShowCheckout(true);
       
-      // Email di notifica ricezione (opzionale qui o dopo pagamento)
       EmailService.sendOrderConfirmation(newOrder);
-
     } catch (error) {
-      console.error("Save order error:", error);
-      alert("Errore durante il salvataggio dei file in Supabase. Riprova.");
+      // Errore reale loggato in store.ts, qui evitiamo blocco UI
     } finally {
       setIsSaving(false);
     }
@@ -126,13 +124,13 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
   const finalizePayment = async () => {
     if (!currentOrderId) return;
 
-    // APERTURA IMMEDIATA LINK SUMUP (Fondamentale per i popup blocker)
+    // Apertura finestra SumUp
     const paymentWindow = window.open(SUMUP_PAY_LINK, '_blank');
     
     setIsFinalizing(true);
 
     try {
-      // Aggiorna lo stato su Supabase a "Pagato"
+      // Se l'utente clicca "Paga", aggiorniamo lo status in Supabase a "paid"
       await updateStatus(currentOrderId, OrderStatus.PAID);
 
       if (!paymentWindow || paymentWindow.closed || typeof paymentWindow.closed === 'undefined') {
@@ -142,10 +140,9 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       setUploadedPhotos([]);
       setShowCheckout(false);
       setCurrentOrderId(null);
-      alert("Ordine confermato! Le tue foto sono state salvate e il pagamento è stato registrato. Riceverai aggiornamenti via email.");
+      alert("Pagamento avviato! Il tuo ordine è stato registrato.");
     } catch (error) {
-      console.error("Finalize payment error:", error);
-      alert("Errore durante l'aggiornamento dello stato del pagamento. L'ordine rimarrà 'In sospeso'.");
+      console.log("Finalize payment error detail:", error);
     } finally {
       setIsFinalizing(false);
     }
@@ -247,7 +244,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
               <div className="space-y-8 py-4">
                 <div className="text-center mb-10">
                    <h3 className="text-2xl md:text-3xl font-serif mb-4">File Caricati Correttamente!</h3>
-                   <p className="text-gray-500 italic text-sm">Il tuo ordine è stato salvato come 'In sospeso'. Completa il pagamento per avviare la stampa professionale.</p>
+                   <p className="text-gray-500 italic text-sm">Il tuo ordine è stato salvato in Supabase. Completa il pagamento per avviare la stampa professionale.</p>
                 </div>
                 
                 <div className="max-w-md mx-auto bg-gray-50 p-8 md:p-12 rounded-[50px] border border-gray-100 text-center shadow-lg">

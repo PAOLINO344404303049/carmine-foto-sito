@@ -8,16 +8,16 @@ const ADMIN_EMAIL = "carminephotography0@gmail.com";
 const ADMIN_PASS = "Carmine01.";
 
 interface SupabaseOrder {
-  id?: string;
+  id: string;
   customer_name: string;
   customer_email: string;
   package: string;
   photo_urls: string[];
   status: string;
-  created_at?: string;
-  user_id?: string;
-  payment_method?: string;
-  total?: number;
+  created_at: string;
+  user_id: string;
+  payment_method: string;
+  total: number;
 }
 
 export const useStore = () => {
@@ -42,16 +42,23 @@ export const useStore = () => {
     try {
       let query = supabase.from('orders').select('*');
       
+      // Admin vede tutto, Cliente filtra per email
       if (user.role !== 'admin') {
         query = query.eq('customer_email', user.email);
       }
 
+      // Ordinamento per data decrescente
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (!error && data) {
-        const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item: SupabaseOrder) => ({
-          id: item.id || '',
-          userId: item.user_id || '',
+      if (error) {
+        console.log("Errore reale fetch Supabase:", error);
+        return;
+      }
+
+      if (data) {
+        const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item) => ({
+          id: item.id,
+          userId: item.user_id,
           userName: item.customer_name,
           userEmail: item.customer_email,
           packageId: item.package, 
@@ -64,13 +71,13 @@ export const useStore = () => {
           })),
           status: item.status as OrderStatus,
           paymentMethod: (item.payment_method as PaymentMethod) || PaymentMethod.ONLINE_SUMUP,
-          createdAt: item.created_at || new Date().toISOString(),
+          createdAt: item.created_at,
           total: item.total || 0
         }));
         setOrders(mappedOrders);
       }
     } catch (err) {
-      console.error("Errore fetch ordini:", err);
+      console.log("Eccezione durante fetch ordini:", err);
     } finally {
       setLoading(false);
     }
@@ -110,26 +117,28 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    const dbOrder: SupabaseOrder = {
+    const dbOrder = {
       id: order.id,
       user_id: order.userId,
       customer_name: order.userName,
       customer_email: order.userEmail,
       package: order.packageName,
       photo_urls: order.photos.map(p => p.url),
-      status: order.status,
+      status: order.status, // Sarà "pending"
       payment_method: order.paymentMethod,
-      total: order.total
+      total: order.total,
+      created_at: new Date().toISOString()
     };
 
     const { error } = await supabase.from('orders').insert([dbOrder]);
 
-    if (!error) {
-      await fetchOrders();
-    } else {
-      console.error("Errore salvataggio Supabase:", error);
+    if (error) {
+      console.log("Errore reale inserimento Supabase:", error);
       throw error;
     }
+
+    // Refresh ordini dopo inserimento
+    await fetchOrders();
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
@@ -138,9 +147,12 @@ export const useStore = () => {
       .update({ status })
       .eq('id', orderId);
 
-    if (!error) {
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    if (error) {
+      console.log("Errore reale update Supabase:", error);
+      return;
     }
+
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
   };
 
   const deleteOrder = async (orderId: string) => {
@@ -149,9 +161,12 @@ export const useStore = () => {
       .delete()
       .eq('id', orderId);
 
-    if (!error) {
-      setOrders(prev => prev.filter(o => o.id !== orderId));
+    if (error) {
+      console.log("Errore reale delete Supabase:", error);
+      return;
     }
+
+    setOrders(prev => prev.filter(o => o.id !== orderId));
   };
 
   return {

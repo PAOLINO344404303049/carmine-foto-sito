@@ -1,10 +1,10 @@
 
 export enum OrderStatus {
-  PENDING_PAYMENT = 'In sospeso',
-  PAID = 'Pagato',
-  PROCESSING = 'In lavorazione',
-  PRINTED = 'Stampato',
-  COLLECTED = 'Ritirato'
+  PENDING_PAYMENT = 'pending',
+  PAID = 'paid',
+  PROCESSING = 'processing',
+  PRINTED = 'printed',
+  COLLECTED = 'collected'
 }
 
 export enum PaymentMethod {
