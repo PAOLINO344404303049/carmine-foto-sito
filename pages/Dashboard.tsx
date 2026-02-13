@@ -9,7 +9,7 @@ interface DashboardProps {
   user: User;
   orders: Order[];
   addOrder: (order: Order) => Promise<void>;
-  updateStatus?: (orderId: string, status: OrderStatus) => Promise<void>;
+  updateStatus: (orderId: string, status: OrderStatus) => Promise<void>;
   navigate: (page: string) => void;
   onLogout: () => void;
 }
@@ -107,16 +107,17 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         total: selectedPackage.price
       };
 
+      // Salvataggio immediato in Supabase (stato "In sospeso")
       await addOrder(newOrder);
       setCurrentOrderId(orderId);
       setShowCheckout(true);
       
-      // Email di notifica "Ordine ricevuto"
+      // Email di notifica ricezione (opzionale qui o dopo pagamento)
       EmailService.sendOrderConfirmation(newOrder);
 
     } catch (error) {
       console.error("Save order error:", error);
-      alert("Errore durante il salvataggio dei file. Riprova.");
+      alert("Errore durante il salvataggio dei file in Supabase. Riprova.");
     } finally {
       setIsSaving(false);
     }
@@ -125,16 +126,14 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
   const finalizePayment = async () => {
     if (!currentOrderId) return;
 
-    // APERTURA IMMEDIATA LINK SUMUP
+    // APERTURA IMMEDIATA LINK SUMUP (Fondamentale per i popup blocker)
     const paymentWindow = window.open(SUMUP_PAY_LINK, '_blank');
     
     setIsFinalizing(true);
 
     try {
       // Aggiorna lo stato su Supabase a "Pagato"
-      if (updateStatus) {
-        await updateStatus(currentOrderId, OrderStatus.PAID);
-      }
+      await updateStatus(currentOrderId, OrderStatus.PAID);
 
       if (!paymentWindow || paymentWindow.closed || typeof paymentWindow.closed === 'undefined') {
         window.open(SUMUP_PAY_LINK, '_blank');
@@ -143,10 +142,10 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       setUploadedPhotos([]);
       setShowCheckout(false);
       setCurrentOrderId(null);
-      alert("Pagamento avviato! L'ordine è stato aggiornato come 'Pagato'. Riceverai aggiornamenti via email.");
+      alert("Ordine confermato! Le tue foto sono state salvate e il pagamento è stato registrato. Riceverai aggiornamenti via email.");
     } catch (error) {
       console.error("Finalize payment error:", error);
-      alert("Errore durante l'aggiornamento dello stato del pagamento.");
+      alert("Errore durante l'aggiornamento dello stato del pagamento. L'ordine rimarrà 'In sospeso'.");
     } finally {
       setIsFinalizing(false);
     }
@@ -248,16 +247,16 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
               <div className="space-y-8 py-4">
                 <div className="text-center mb-10">
                    <h3 className="text-2xl md:text-3xl font-serif mb-4">File Caricati Correttamente!</h3>
-                   <p className="text-gray-500 italic text-sm">Le tue foto sono state salvate. Completa il pagamento per avviare la stampa.</p>
+                   <p className="text-gray-500 italic text-sm">Il tuo ordine è stato salvato come 'In sospeso'. Completa il pagamento per avviare la stampa professionale.</p>
                 </div>
                 
                 <div className="max-w-md mx-auto bg-gray-50 p-8 md:p-12 rounded-[50px] border border-gray-100 text-center shadow-lg">
                    <div className="w-20 h-20 bg-black text-white rounded-[28px] flex items-center justify-center mx-auto mb-8 text-3xl shadow-xl">
                       <i className="fas fa-shield-alt"></i>
                    </div>
-                   <h4 className="font-bold text-lg mb-4 uppercase tracking-widest">Circuito SumUp Sicuro</h4>
+                   <h4 className="font-bold text-lg mb-4 uppercase tracking-widest">Pagamento SumUp</h4>
                    <p className="text-[10px] text-gray-400 mb-10 leading-relaxed font-medium uppercase tracking-widest">
-                      Il tuo ordine #{currentOrderId} è in attesa di pagamento.
+                      ID Ordine: {currentOrderId}
                    </p>
                    <button 
                     onClick={finalizePayment}

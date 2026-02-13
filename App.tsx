@@ -55,6 +55,7 @@ const App: React.FC = () => {
             user={store.user} 
             orders={store.orders}
             addOrder={store.addOrder}
+            updateStatus={store.updateOrderStatus}
             navigate={navigate}
             onLogout={handleLogout}
           />
