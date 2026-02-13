@@ -25,8 +25,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
-    // Log richiesto per debug
-    console.log("Uploading file:", file);
+    console.log(`[UPLOAD] Avvio caricamento Cloudinary per: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
     
     const formData = new FormData();
     formData.append("file", file);
@@ -39,14 +38,12 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
 
     const data = await response.json();
     
-    // Log richiesto per debug
-    console.log("Cloudinary response:", data);
-
     if (!response.ok) {
-      console.error("Errore upload Cloudinary:", data);
-      throw new Error(data.error?.message || "Errore nel caricamento delle immagini");
+      console.error("[UPLOAD] Fallimento Cloudinary:", data);
+      throw new Error(data.error?.message || "Errore durante l'upload dell'immagine.");
     }
 
+    console.log(`[UPLOAD] Successo Cloudinary per ${file.name}:`, data.secure_url);
     return data.secure_url;
   };
 
@@ -54,21 +51,26 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
     const files = e.target.files;
     if (!files || !selectedPackage) return;
     
-    const newFiles = Array.from(files);
+    // Fix: Cast Array.from(files) to File[] to avoid 'unknown' type errors on line 55
+    const newFiles = Array.from(files) as File[];
+    console.log("[FILES] File selezionati dall'utente:", newFiles.map(f => f.name));
+    
     const totalAllowed = selectedPackage.count;
     const currentCount = localFiles.length;
     const remaining = Math.max(0, totalAllowed - currentCount);
     
     const filesToAdd = newFiles.slice(0, remaining);
     
-    if (remaining === 0) {
+    if (newFiles.length > remaining && remaining > 0) {
+      alert(`Puoi aggiungere solo altre ${remaining} foto per questo pacchetto.`);
+    } else if (remaining === 0) {
       alert(`Hai già raggiunto il limite di ${totalAllowed} foto.`);
       return;
     }
 
     setLocalFiles(prev => [...prev, ...filesToAdd]);
     
-    // Generazione anteprime locali
+    // Fix: Accessing file properties now that filesToAdd is correctly inferred as File[] (fixes lines 74, 75, 76)
     const newPreviews: PhotoFile[] = filesToAdd.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
@@ -79,22 +81,30 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
     setUploadedPhotosPreview(prev => [...prev, ...newPreviews]);
   };
 
+  const resetForm = () => {
+    console.log("[UI] Reset del modulo di upload.");
+    setLocalFiles([]);
+    setUploadedPhotosPreview([]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.MouseEvent | React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log("Inizio processo di invio ordine...");
-
+    
     if (!selectedPackage || localFiles.length === 0) {
-      console.warn("Dati mancanti per l'invio (pacchetto o file).");
+      alert("Seleziona almeno una foto prima di procedere.");
       return;
     }
     
-    // Blocca il bottone impostando isUploading a true
+    console.log("[FLOW] Inizio procedura d'invio ordine...");
     setIsUploading(true);
 
     try {
       const uploadedUrls: PhotoFile[] = [];
       
-      // Upload Cloudinary sequenziale per massima stabilità
+      // Caricamento sequenziale per stabilità su reti mobili
       for (const file of localFiles) {
         const secureUrl = await uploadToCloudinary(file);
         uploadedUrls.push({
@@ -105,7 +115,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         });
       }
 
-      console.log("Tutti gli upload Cloudinary completati con successo.");
+      console.log("[FLOW] Tutti i file sono su Cloudinary. Salvataggio su Supabase...");
 
       const newOrderData: Order = {
         id: `TEMP-${Date.now()}`, 
@@ -121,51 +131,48 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         total: selectedPackage.price
       };
 
-      // Salvataggio su Supabase
+      // Salvataggio nel database tramite store (gestisce RLS e campi corretti)
       const savedOrder = await addOrder(newOrderData);
-      
-      // Successo: Reset del form
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      setLocalFiles([]);
-      setUploadedPhotosPreview([]);
       
       const finalId = savedOrder?.id || newOrderData.id;
       setCurrentOrderId(finalId);
+      
+      // Reset dei file dopo il salvataggio avvenuto con successo
+      resetForm();
+      
+      // Passaggio alla fase di checkout
       setShowCheckout(true);
       
-      alert("Foto caricate e ordine salvato con successo!");
+      alert("Foto caricate con successo! Procedi ora al pagamento.");
       
-      // Invio email di conferma (senza bloccare la UI)
+      // Notifica email silenziosa
       EmailService.sendOrderConfirmation({...newOrderData, id: finalId}).catch(err => console.error("Email service error:", err));
       
     } catch (error: any) {
-      console.error("ERRORE CRITICO NEL FLUSSO DI INVIO:", error);
-      alert("Errore durante l'operazione: " + (error.message || "Verifica la connessione e riprova."));
+      console.error("[FLOW] ERRORE CRITICO:", error);
+      alert("Si è verificato un errore: " + (error.message || "Riprova tra qualche istante."));
     } finally {
-      // Sblocca il bottone
       setIsUploading(false);
     }
   };
 
   const finalizePayment = async () => {
     if (!currentOrderId) return;
-
+    
+    console.log(`[PAYMENT] Apertura SumUp per l'ordine: ${currentOrderId}`);
     const paymentWindow = window.open(SUMUP_PAY_LINK, '_blank');
     setIsFinalizing(true);
 
     try {
-      // Aggiorniamo lo status identificato dall'ID reale restituito da Supabase
+      // Aggiorniamo lo status nel database
       await updateStatus(currentOrderId, OrderStatus.PAID);
-
-      if (!paymentWindow || paymentWindow.closed || typeof paymentWindow.closed === 'undefined') {
-        window.open(SUMUP_PAY_LINK, '_blank');
-      }
       
       setShowCheckout(false);
       setCurrentOrderId(null);
-      alert("Grazie! Il tuo ordine è stato ricevuto ed è ora in fase di elaborazione.");
+      alert("Pagamento registrato! Riceverai un'email quando le foto saranno pronte.");
     } catch (error) {
-      console.error("Errore aggiornamento pagamento:", error);
+      console.error("[PAYMENT] Errore aggiornamento stato dopo pagamento:", error);
+      alert("Il pagamento è stato avviato, ma c'è stato un problema nell'aggiornare lo stato. Contattaci se necessario.");
     } finally {
       setIsFinalizing(false);
     }
@@ -192,7 +199,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white p-6 md:p-12 rounded-[40px] shadow-sm border border-gray-100">
-            <h2 className="text-2xl md:text-3xl font-serif mb-8 text-black">Il tuo Ordine</h2>
+            <h2 className="text-2xl md:text-3xl font-serif mb-8 text-black italic">Il tuo Ordine</h2>
             {!selectedPackage ? (
               <div className="space-y-6">
                 <p className="text-gray-500 mb-6 font-bold uppercase tracking-widest text-[10px]">1. Seleziona il pacchetto</p>
@@ -214,9 +221,9 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
               <div className="space-y-8">
                 <div className="flex items-center justify-between p-6 bg-gray-50 rounded-3xl border border-gray-100">
                   <div className="flex-grow">
-                    <h4 className="font-bold text-lg md:text-xl uppercase tracking-tighter">{selectedPackage.name}</h4>
+                    <h4 className="font-bold text-lg md:text-xl uppercase tracking-tighter italic">{selectedPackage.name}</h4>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                      {uploadedPhotosPreview.length} / {selectedPackage.count} foto selezionate
+                      {uploadedPhotosPreview.length} / {selectedPackage.count} foto caricate
                     </p>
                   </div>
                 </div>
@@ -229,15 +236,15 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                   {isUploading ? (
                     <div className="flex flex-col items-center">
                         <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Invio in corso...</p>
+                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Caricamento in corso... attendere</p>
                     </div>
                   ) : (
                     <>
                         <div className="w-12 h-12 md:w-16 md:h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-6 text-black border border-gray-100">
                           <i className="fas fa-upload text-xl md:text-2xl"></i>
                         </div>
-                        <h4 className="font-bold text-base md:text-lg mb-2 text-black uppercase tracking-widest">Seleziona i tuoi file</h4>
-                        <p className="text-xs text-gray-400 font-medium">Tocca per selezionare le immagini (JPG/PNG).</p>
+                        <h4 className="font-bold text-base md:text-lg mb-2 text-black uppercase tracking-widest">Scegli le tue foto</h4>
+                        <p className="text-xs text-gray-400 font-medium italic">Seleziona i file dal tuo dispositivo</p>
                     </>
                   )}
                 </div>
@@ -259,13 +266,13 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
 
                 {uploadedPhotosPreview.length > 0 && (
                   <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
-                    <p className="text-xl md:text-2xl font-serif font-bold text-black italic">Totale: €{selectedPackage.price}</p>
+                    <p className="text-xl md:text-2xl font-serif font-bold text-black italic">Prezzo: €{selectedPackage.price}</p>
                     <button 
                       onClick={handleSubmit} 
                       disabled={isUploading}
                       className="w-full sm:w-auto px-12 py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
                     >
-                      {isUploading ? 'Attendere...' : 'Invia Foto e Procedi'}
+                      {isUploading ? 'Salvataggio...' : 'Conferma e procedi'}
                     </button>
                   </div>
                 )}
@@ -273,24 +280,24 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
             ) : (
               <div className="space-y-8 py-4">
                 <div className="text-center mb-10">
-                   <h3 className="text-2xl md:text-3xl font-serif mb-4">Ordine Registrato!</h3>
-                   <p className="text-gray-500 italic text-sm">Il tuo ordine è stato correttamente salvato nel nostro database.</p>
+                   <h3 className="text-2xl md:text-3xl font-serif mb-4 italic">Ordine Ricevuto!</h3>
+                   <p className="text-gray-500 italic text-sm">Abbiamo salvato correttamente le tue foto.</p>
                 </div>
                 
                 <div className="max-w-md mx-auto bg-gray-50 p-8 md:p-12 rounded-[50px] border border-gray-100 text-center shadow-lg">
                    <div className="w-20 h-20 bg-black text-white rounded-[28px] flex items-center justify-center mx-auto mb-8 text-3xl shadow-xl">
-                      <i className="fas fa-shield-alt"></i>
+                      <i className="fas fa-credit-card"></i>
                    </div>
-                   <h4 className="font-bold text-lg mb-4 uppercase tracking-widest">Pagamento SumUp</h4>
-                   <p className="text-[10px] text-gray-400 mb-10 leading-relaxed font-medium uppercase tracking-widest leading-loose">
-                      Effettua ora il pagamento sicuro per avviare la stampa dei tuoi ricordi.
+                   <h4 className="font-bold text-lg mb-4 uppercase tracking-widest italic">Pagamento sicuro</h4>
+                   <p className="text-[10px] text-gray-400 mb-10 leading-relaxed font-bold uppercase tracking-widest leading-loose">
+                      Completa l'operazione con SumUp per avviare la stampa.
                    </p>
                    <button 
                     onClick={finalizePayment}
                     disabled={isFinalizing}
                     className="w-full py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-4 disabled:opacity-50"
                    >
-                      {isFinalizing ? 'Elaborazione...' : 'Paga ora online'}
+                      {isFinalizing ? 'Attendi...' : 'Paga ora online'}
                       {!isFinalizing && <i className="fas fa-external-link-alt"></i>}
                    </button>
                 </div>
@@ -302,23 +309,23 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         <div className="space-y-8">
           <div className="bg-white p-8 md:p-10 rounded-[40px] shadow-sm border border-gray-100">
             <div className="flex items-center space-x-6 mb-8">
-              <div className="w-16 h-16 bg-black text-white rounded-[20px] flex items-center justify-center text-2xl font-serif shadow-xl">
+              <div className="w-16 h-16 bg-black text-white rounded-[20px] flex items-center justify-center text-2xl font-serif shadow-xl italic">
                 {user.name[0].toUpperCase()}
               </div>
               <div>
-                <h3 className="font-bold text-xl text-black leading-none">{user.name}</h3>
-                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2">Area Personale</p>
+                <h3 className="font-bold text-xl text-black leading-none italic">{user.name}</h3>
+                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2">Profilo Attivo</p>
               </div>
             </div>
             <button onClick={onLogout} className="w-full py-4 border border-gray-100 text-gray-400 hover:text-red-600 rounded-2xl text-[9px] font-bold uppercase tracking-[0.2em] transition-all">
-               LOGOUT
+               CHIUDI SESSIONE
             </button>
           </div>
 
           <div className="bg-white p-8 md:p-10 rounded-[40px] shadow-sm border border-gray-100">
-            <h2 className="text-lg font-serif mb-8 text-black border-b border-gray-50 pb-5">Storico Ordini</h2>
+            <h2 className="text-lg font-serif mb-8 text-black border-b border-gray-50 pb-5 italic">I tuoi Ordini</h2>
             {orders.length === 0 ? (
-              <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest text-center py-10 italic">Nessun ordine presente.</p>
+              <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest text-center py-10 italic">Ancora nessun ordine.</p>
             ) : (
               <div className="space-y-4">
                 {orders.map(order => (
@@ -329,7 +336,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                         {order.status}
                       </span>
                     </div>
-                    <p className="font-bold text-xs text-gray-900 mb-1">{order.packageName}</p>
+                    <p className="font-bold text-xs text-gray-900 mb-1 italic">{order.packageName}</p>
                     <p className="text-[8px] text-gray-400 uppercase font-bold tracking-widest">{order.photos.length} Foto &bull; €{order.total}</p>
                     <p className="text-[7px] text-gray-300 mt-2">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>

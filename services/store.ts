@@ -5,7 +5,6 @@ import { supabase } from './supabase';
 
 const AUTH_KEY = 'studio_auth_v2';
 const ADMIN_EMAIL = "carminephotography0@gmail.com";
-const ADMIN_PASS = "Carmine01.";
 
 // Interfaccia per mappare esattamente le colonne della tabella Supabase
 interface SupabaseOrder {
@@ -36,12 +35,13 @@ export const useStore = () => {
     setLoading(true);
     
     try {
-      console.log("Recupero ordini per:", user.email);
+      console.log(`[STORE] Recupero ordini per: ${user.email} (Ruolo: ${user.role})`);
+      
+      // Iniziamo la query base
       let query = supabase.from('orders').select('*');
       
-      // Admin vede tutto, Cliente filtra per la propria email
-      // La policy RLS su Supabase dovrebbe già gestire questo, 
-      // ma aggiungiamo il filtro esplicito per sicurezza e pulizia.
+      // La RLS di Supabase filtra già i dati, ma applichiamo il filtro esplicito 
+      // per chiarezza e per evitare overhead se l'utente non è admin.
       if (user.email !== ADMIN_EMAIL) {
         query = query.eq('customer_email', user.email);
       }
@@ -50,7 +50,7 @@ export const useStore = () => {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
-        console.error("Errore fetch ordini Supabase:", error);
+        console.error("[STORE] Errore fetch ordini Supabase:", error.message);
         return;
       }
 
@@ -74,31 +74,31 @@ export const useStore = () => {
           total: 20 
         }));
         setOrders(mappedOrders);
+        console.log(`[STORE] Caricati ${mappedOrders.length} ordini.`);
       }
     } catch (err) {
-      console.error("Eccezione nel caricamento ordini:", err);
+      console.error("[STORE] Eccezione nel caricamento ordini:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const login = async (email: string, pass: string): Promise<User> => {
-    // 1) Tentativo di autenticazione reale su Supabase per attivare RLS
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password: pass,
     });
 
     if (authError) {
-      console.error("Errore Autenticazione Supabase:", authError.message);
+      console.error("[STORE] Errore Autenticazione Supabase:", authError.message);
       throw authError;
     }
 
-    const role = email === ADMIN_EMAIL ? 'admin' : 'client';
+    const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'client';
     const loggedUser: User = {
       id: authData.user.id,
-      name: email.split('@')[0],
-      email: email,
+      name: authData.user.email?.split('@')[0] || email.split('@')[0],
+      email: email.toLowerCase(),
       role: role as 'admin' | 'client',
       mustChangePassword: false
     };
@@ -109,20 +109,21 @@ export const useStore = () => {
   };
 
   const signUp = async (email: string, pass: string): Promise<User> => {
+    // Registrazione: Supabase è configurato per NON richiedere conferma email
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password: pass,
     });
 
     if (authError) {
-      console.error("Errore Registrazione Supabase:", authError.message);
+      console.error("[STORE] Errore Registrazione Supabase:", authError.message);
       throw authError;
     }
 
     const newUser: User = {
       id: authData.user?.id || Math.random().toString(36).substr(2, 9),
       name: email.split('@')[0],
-      email: email,
+      email: email.toLowerCase(),
       role: 'client',
       mustChangePassword: false
     };
@@ -140,57 +141,56 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    // 1) Prepariamo i dati per Supabase (Solo i campi richiesti dalla tabella)
+    // Prepariamo i dati ESATTAMENTE come richiesto dalla tabella
     const dbOrder = {
-      customer_email: order.userEmail,
+      customer_email: order.userEmail.toLowerCase(),
       photo_urls: order.photos.map(p => p.url),
       status: 'pending',
       created_at: new Date().toISOString()
     };
 
-    // Log richiesto: Dati inviati
-    console.log("Saving to Supabase:", dbOrder);
+    console.log("[STORE] Invio dati a Supabase (Tabella orders):", dbOrder);
 
-    const result = await supabase.from('orders').insert([dbOrder]).select();
+    const { data, error } = await supabase.from('orders').insert([dbOrder]).select();
 
-    // Log richiesto: Risposta Supabase
-    console.log("Supabase response:", result);
-
-    if (result.error) {
-      // Log richiesto: Errore Supabase
-      console.error("Supabase error:", result.error);
-      throw result.error;
+    if (error) {
+      console.error("[STORE] Errore salvataggio Supabase (RLS o Schema):", error);
+      throw error;
     }
 
-    // Refresh degli ordini locale
+    console.log("[STORE] Risposta successo Supabase:", data);
+    
+    // Aggiornamento immediato lista locale
     await fetchOrders();
     
-    return result.data ? result.data[0] : null;
+    return data ? data[0] : null;
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    console.log(`[STORE] Aggiornamento status ordine ${orderId} a ${status}`);
     const { error } = await supabase
       .from('orders')
       .update({ status })
       .eq('id', orderId);
 
     if (error) {
-      console.error("Errore update status Supabase:", error);
-      return;
+      console.error("[STORE] Errore update status Supabase:", error.message);
+      throw error;
     }
 
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
   };
 
   const deleteOrder = async (orderId: string) => {
+    console.log(`[STORE] Eliminazione definitiva ordine ${orderId}`);
     const { error } = await supabase
       .from('orders')
       .delete()
       .eq('id', orderId);
 
     if (error) {
-      console.error("Errore eliminazione ordine Supabase:", error);
-      return;
+      console.error("[STORE] Errore eliminazione Supabase:", error.message);
+      throw error;
     }
 
     setOrders(prev => prev.filter(o => o.id !== orderId));
