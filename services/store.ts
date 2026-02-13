@@ -14,9 +14,10 @@ interface SupabaseOrder {
   photo_urls: string[];
   status: string;
   created_at: string;
-  // Campi opzionali per evitare errori se non presenti
+  // Campi opzionali per evitare errori se non presenti nelle policy o nel DB
   customer_name?: string;
   package?: string;
+  total?: number;
 }
 
 export const useStore = () => {
@@ -42,10 +43,12 @@ export const useStore = () => {
       let query = supabase.from('orders').select('*');
       
       // Admin vede tutto, Cliente filtra per email
+      // Assicurarsi che l'email dell'admin sia corretta per le policy RLS
       if (user.role !== 'admin') {
         query = query.eq('customer_email', user.email);
       }
 
+      // Ordinamento per data decrescente come richiesto
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
@@ -56,11 +59,11 @@ export const useStore = () => {
       if (data) {
         const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item) => ({
           id: item.id,
-          userId: '', // Non più necessario se usiamo email
+          userId: '', 
           userName: item.customer_name || item.customer_email.split('@')[0],
           userEmail: item.customer_email,
-          packageId: item.package || 'standard', 
-          packageName: item.package || 'Pacchetto Foto',
+          packageId: item.package || 'standard_100', 
+          packageName: item.package || 'Pacchetto 100 Foto',
           photos: (item.photo_urls || []).map((url: string, index: number) => ({
             id: `photo-${index}`,
             name: `Foto ${index + 1}`,
@@ -70,7 +73,7 @@ export const useStore = () => {
           status: (item.status as OrderStatus) || OrderStatus.PENDING_PAYMENT,
           paymentMethod: PaymentMethod.ONLINE_SUMUP,
           createdAt: item.created_at,
-          total: 20 // Default se colonna total assente
+          total: item.total || 20 
         }));
         setOrders(mappedOrders);
       }
@@ -115,7 +118,7 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    // 1) Prepariamo l'oggetto inviando SOLO i campi confermati dall'utente
+    // 1) Prepariamo l'oggetto inviando SOLO i campi esistenti nella tabella orders
     const dbOrder = {
       customer_email: order.userEmail,
       photo_urls: order.photos.map(p => p.url),
@@ -125,17 +128,21 @@ export const useStore = () => {
 
     console.log("Tentativo inserimento ordine su Supabase:", dbOrder);
 
-    const result = await supabase.from('orders').insert([dbOrder]);
+    // Usiamo .select() per ottenere il record appena inserito (incluso l'ID generato dal DB)
+    const { data, error } = await supabase.from('orders').insert([dbOrder]).select();
 
-    console.log("Risposta Supabase (Insert):", result);
-
-    if (result.error) {
-      console.error("Errore critico Supabase nell'inserimento:", result.error);
-      throw result.error;
+    if (error) {
+      console.error("Errore critico Supabase nell'inserimento:", error);
+      throw error;
     }
+
+    console.log("Risposta Supabase (Insert successo):", data);
 
     // Refresh ordini per aggiornare la dashboard
     await fetchOrders();
+    
+    // Restituiamo il primo record (quello inserito)
+    return data ? data[0] : null;
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
