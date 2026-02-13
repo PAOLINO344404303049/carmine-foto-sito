@@ -1,27 +1,21 @@
-
 import React from 'react';
-import { LOGO_URL } from '../constants';
+import Navbar from './Navbar';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-white font-sans">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <img src={LOGO_URL} alt="Logo" className="h-10 md:h-12 w-auto object-contain" />
-          <div className="hidden md:flex space-x-8 text-[11px] font-bold uppercase tracking-widest text-gray-400">
-            <span className="text-black">Servizio Stampa</span>
-            <span>Portfolio</span>
-            <span>Contatti</span>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col bg-white font-sans text-gray-900">
+      <Navbar />
       <main className="flex-grow">
-        <div className="max-w-7xl mx-auto px-4 py-8 md:px-8 md:py-12">
+        <div className="max-w-7xl mx-auto px-6 py-12 lg:px-12">
           {children}
         </div>
       </main>
-      <footer className="bg-black text-white py-12 px-6 text-center">
-        <p className="text-[10px] uppercase tracking-[0.3em] font-bold">© 2024 Carmine Felice Napolitano Fotografo</p>
+      <footer className="bg-white border-t border-gray-100 py-16 px-6 text-center">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <p className="text-[10px] uppercase tracking-[0.4em] font-bold text-gray-400">Carmine Felice Napolitano Fotografo</p>
+          <div className="w-12 h-px bg-gray-200 mx-auto"></div>
+          <p className="text-[9px] text-gray-300 uppercase tracking-widest">Mugnano del Cardinale (AV) • Studio Professionale</p>
+        </div>
       </footer>
     </div>
   );

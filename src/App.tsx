@@ -1,38 +1,33 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Layout from './components/Layout';
 import Admin from './components/Admin';
 import PhotoGallery from './components/PhotoGallery';
 import Payment from './components/Payment';
 
 const App: React.FC = () => {
-  const [photos, setPhotos] = useState<string[]>(() => {
-    const saved = localStorage.getItem('uploaded_photos_urls');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [photoCount, setPhotoCount] = useState(0);
 
-  useEffect(() => {
-    localStorage.setItem('uploaded_photos_urls', JSON.stringify(photos));
-  }, [photos]);
-
-  const handleNewPhoto = (url: string) => {
-    setPhotos(prev => [...prev, url]);
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
   };
 
   return (
     <Layout>
-      <div className="animate-fade-in-up">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-6xl font-serif mb-4">Servizio Stampa Foto</h1>
-          <div className="w-20 h-1 bg-black mx-auto mb-6"></div>
-          <p className="text-gray-500 max-w-xl mx-auto text-sm md:text-base px-4">
-            Trasforma i tuoi pixel in ricordi tangibili di alta qualità. Carica le tue foto, paga in sicurezza e ritira il tuo pacchetto in studio.
+      <div className="animate-fade-in">
+        <div className="text-center mb-16 md:mb-24">
+          <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-gray-400 block mb-6">Stampa Professionale</span>
+          <h1 className="text-4xl md:text-7xl font-serif mb-6 italic tracking-tight">Cattura il momento,<br/>noi lo rendiamo eterno.</h1>
+          <div className="w-24 h-1 bg-black mx-auto mb-10"></div>
+          <p className="text-gray-500 max-w-2xl mx-auto text-sm md:text-lg px-4 leading-relaxed font-light">
+            Benvenuto nel nostro portale di stampa. Carica le tue foto preferite, 
+            sincronizzale nel nostro cloud e procedi al pagamento per ricevere stampe di qualità premium.
           </p>
         </div>
 
-        <Admin onUploadSuccess={handleNewPhoto} currentCount={photos.length} />
+        <Admin onUploadSuccess={handleRefresh} currentCount={photoCount} />
         
-        <PhotoGallery photos={photos} />
+        <PhotoGallery refreshKey={refreshKey} onCountUpdate={setPhotoCount} />
         
         <Payment />
       </div>
