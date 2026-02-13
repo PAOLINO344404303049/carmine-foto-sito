@@ -7,17 +7,13 @@ const AUTH_KEY = 'studio_auth_v2';
 const ADMIN_EMAIL = "carminephotography0@gmail.com";
 const ADMIN_PASS = "Carmine01.";
 
-// Interfaccia flessibile per riflettere i campi reali del DB
+// Interfaccia per i dati grezzi da Supabase
 interface SupabaseOrder {
   id: string;
   customer_email: string;
   photo_urls: string[];
   status: string;
   created_at: string;
-  // Campi opzionali per evitare errori se non presenti nelle policy o nel DB
-  customer_name?: string;
-  package?: string;
-  total?: number;
 }
 
 export const useStore = () => {
@@ -42,13 +38,12 @@ export const useStore = () => {
     try {
       let query = supabase.from('orders').select('*');
       
-      // Admin vede tutto, Cliente filtra per email
-      // Assicurarsi che l'email dell'admin sia corretta per le policy RLS
-      if (user.role !== 'admin') {
+      // Admin vede tutto, Cliente filtra per la propria email
+      if (user.email !== ADMIN_EMAIL) {
         query = query.eq('customer_email', user.email);
       }
 
-      // Ordinamento per data decrescente come richiesto
+      // Ordinamento per data decrescente (created_at DESC)
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
@@ -60,10 +55,10 @@ export const useStore = () => {
         const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item) => ({
           id: item.id,
           userId: '', 
-          userName: item.customer_name || item.customer_email.split('@')[0],
+          userName: item.customer_email.split('@')[0],
           userEmail: item.customer_email,
-          packageId: item.package || 'standard_100', 
-          packageName: item.package || 'Pacchetto 100 Foto',
+          packageId: 'standard_100', 
+          packageName: 'Pacchetto 100 Foto',
           photos: (item.photo_urls || []).map((url: string, index: number) => ({
             id: `photo-${index}`,
             name: `Foto ${index + 1}`,
@@ -73,7 +68,7 @@ export const useStore = () => {
           status: (item.status as OrderStatus) || OrderStatus.PENDING_PAYMENT,
           paymentMethod: PaymentMethod.ONLINE_SUMUP,
           createdAt: item.created_at,
-          total: item.total || 20 
+          total: 20 
         }));
         setOrders(mappedOrders);
       }
@@ -118,7 +113,7 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    // 1) Prepariamo l'oggetto inviando SOLO i campi esistenti nella tabella orders
+    // 1) Prepariamo l'oggetto con SOLO i campi esistenti nella tabella
     const dbOrder = {
       customer_email: order.userEmail,
       photo_urls: order.photos.map(p => p.url),
@@ -126,23 +121,24 @@ export const useStore = () => {
       created_at: new Date().toISOString()
     };
 
-    console.log("Tentativo inserimento ordine su Supabase:", dbOrder);
+    // Log richiesto: "Saving to Supabase:", dati che vengono inseriti
+    console.log("Saving to Supabase:", dbOrder);
 
-    // Usiamo .select() per ottenere il record appena inserito (incluso l'ID generato dal DB)
-    const { data, error } = await supabase.from('orders').insert([dbOrder]).select();
+    const result = await supabase.from('orders').insert([dbOrder]).select();
 
-    if (error) {
-      console.error("Errore critico Supabase nell'inserimento:", error);
-      throw error;
+    // Log richiesto: "Supabase response:", risultato insert
+    console.log("Supabase response:", result);
+
+    if (result.error) {
+      // Log richiesto: console.error("Supabase error:", error)
+      console.error("Supabase error:", result.error);
+      throw result.error;
     }
 
-    console.log("Risposta Supabase (Insert successo):", data);
-
-    // Refresh ordini per aggiornare la dashboard
+    // Refresh degli ordini locale
     await fetchOrders();
     
-    // Restituiamo il primo record (quello inserito)
-    return data ? data[0] : null;
+    return result.data ? result.data[0] : null;
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
