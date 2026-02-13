@@ -48,7 +48,7 @@ const App: React.FC = () => {
       case 'login':
         return <Auth mode="login" navigate={navigate} onLogin={store.login} />;
       case 'register':
-        return <Auth mode="register" navigate={navigate} onLogin={store.login} />;
+        return <Auth mode="register" navigate={navigate} onLogin={store.signUp} />;
       case 'dashboard':
         return store.user ? (
           <Dashboard 

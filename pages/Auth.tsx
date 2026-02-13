@@ -6,21 +6,29 @@ import { User } from '../types';
 interface AuthProps {
   mode: 'login' | 'register';
   navigate: (page: string) => void;
-  onLogin: (email: string, pass: string) => User;
+  onLogin: (email: string, pass: string) => Promise<User>;
 }
 
 const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email && password) {
-      const user = onLogin(email, password);
-      if (user.role === 'admin') {
-        navigate('admin');
-      } else {
-        navigate('dashboard');
+      setIsLoading(true);
+      try {
+        const user = await onLogin(email, password);
+        if (user.role === 'admin') {
+          navigate('admin');
+        } else {
+          navigate('dashboard');
+        }
+      } catch (error: any) {
+        alert("Errore Autenticazione: " + (error.message || "Email o password non corretti."));
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -43,7 +51,6 @@ const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
               <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Nome Completo</label>
               <input 
                 type="text" 
-                required 
                 className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black transition-all"
                 placeholder="Nome e Cognome"
               />
@@ -74,9 +81,10 @@ const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
 
           <button 
             type="submit"
-            className="w-full py-4 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-lg transition-all transform hover:scale-[1.02]"
+            disabled={isLoading}
+            className="w-full py-4 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-lg transition-all transform hover:scale-[1.02] disabled:opacity-50"
           >
-            {mode === 'login' ? 'Entra ora' : 'Registrati'}
+            {isLoading ? 'Attendi...' : (mode === 'login' ? 'Entra ora' : 'Registrati')}
           </button>
         </form>
 

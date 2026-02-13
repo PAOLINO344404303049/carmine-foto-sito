@@ -7,7 +7,7 @@ const AUTH_KEY = 'studio_auth_v2';
 const ADMIN_EMAIL = "carminephotography0@gmail.com";
 const ADMIN_PASS = "Carmine01.";
 
-// Interfaccia per i dati grezzi da Supabase
+// Interfaccia per mappare esattamente le colonne della tabella Supabase
 interface SupabaseOrder {
   id: string;
   customer_email: string;
@@ -36,14 +36,17 @@ export const useStore = () => {
     setLoading(true);
     
     try {
+      console.log("Recupero ordini per:", user.email);
       let query = supabase.from('orders').select('*');
       
       // Admin vede tutto, Cliente filtra per la propria email
+      // La policy RLS su Supabase dovrebbe già gestire questo, 
+      // ma aggiungiamo il filtro esplicito per sicurezza e pulizia.
       if (user.email !== ADMIN_EMAIL) {
         query = query.eq('customer_email', user.email);
       }
 
-      // Ordinamento per data decrescente (created_at DESC)
+      // Ordinamento per data decrescente (DESC) come richiesto
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
@@ -73,30 +76,53 @@ export const useStore = () => {
         setOrders(mappedOrders);
       }
     } catch (err) {
-      console.error("Eccezione fetch ordini:", err);
+      console.error("Eccezione nel caricamento ordini:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const login = (email: string, pass: string): User => {
-    if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
-      const adminUser: User = {
-        id: 'admin_primary',
-        name: 'Carmine Felice Napolitano',
-        email: ADMIN_EMAIL,
-        role: 'admin',
-        mustChangePassword: false
-      };
-      setUser(adminUser);
-      localStorage.setItem(AUTH_KEY, JSON.stringify(adminUser));
-      return adminUser;
+  const login = async (email: string, pass: string): Promise<User> => {
+    // 1) Tentativo di autenticazione reale su Supabase per attivare RLS
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass,
+    });
+
+    if (authError) {
+      console.error("Errore Autenticazione Supabase:", authError.message);
+      throw authError;
+    }
+
+    const role = email === ADMIN_EMAIL ? 'admin' : 'client';
+    const loggedUser: User = {
+      id: authData.user.id,
+      name: email.split('@')[0],
+      email: email,
+      role: role as 'admin' | 'client',
+      mustChangePassword: false
+    };
+
+    setUser(loggedUser);
+    localStorage.setItem(AUTH_KEY, JSON.stringify(loggedUser));
+    return loggedUser;
+  };
+
+  const signUp = async (email: string, pass: string): Promise<User> => {
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password: pass,
+    });
+
+    if (authError) {
+      console.error("Errore Registrazione Supabase:", authError.message);
+      throw authError;
     }
 
     const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: authData.user?.id || Math.random().toString(36).substr(2, 9),
       name: email.split('@')[0],
-      email,
+      email: email,
       role: 'client',
       mustChangePassword: false
     };
@@ -106,14 +132,15 @@ export const useStore = () => {
     return newUser;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
     localStorage.removeItem(AUTH_KEY);
     setOrders([]);
   };
 
   const addOrder = async (order: Order) => {
-    // 1) Prepariamo l'oggetto con SOLO i campi esistenti nella tabella
+    // 1) Prepariamo i dati per Supabase (Solo i campi richiesti dalla tabella)
     const dbOrder = {
       customer_email: order.userEmail,
       photo_urls: order.photos.map(p => p.url),
@@ -121,16 +148,16 @@ export const useStore = () => {
       created_at: new Date().toISOString()
     };
 
-    // Log richiesto: "Saving to Supabase:", dati che vengono inseriti
+    // Log richiesto: Dati inviati
     console.log("Saving to Supabase:", dbOrder);
 
     const result = await supabase.from('orders').insert([dbOrder]).select();
 
-    // Log richiesto: "Supabase response:", risultato insert
+    // Log richiesto: Risposta Supabase
     console.log("Supabase response:", result);
 
     if (result.error) {
-      // Log richiesto: console.error("Supabase error:", error)
+      // Log richiesto: Errore Supabase
       console.error("Supabase error:", result.error);
       throw result.error;
     }
@@ -174,6 +201,7 @@ export const useStore = () => {
     orders,
     loading,
     login,
+    signUp,
     logout,
     addOrder,
     updateOrderStatus,
