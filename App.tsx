@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
@@ -8,6 +7,8 @@ import Admin from './pages/Admin';
 import Contact from './pages/Contact';
 import Packages from './pages/Packages';
 import Portfolio from './pages/Portfolio';
+import Privacy from './pages/Privacy';
+import Cookie from './pages/Cookie';
 import { useStore } from './services/store';
 import { WHATSAPP_LINK } from './constants';
 
@@ -69,6 +70,10 @@ const App: React.FC = () => {
         return <Packages navigate={navigate} user={store.user} />;
       case 'contact':
         return <Contact />;
+      case 'privacy':
+        return <Privacy />;
+      case 'cookie':
+        return <Cookie />;
       default:
         return <Home navigate={navigate} />;
     }
@@ -84,12 +89,12 @@ const App: React.FC = () => {
         {renderPage()}
       </Layout>
       
-      {/* Floating WhatsApp Button - SVG FIXED VERSION */}
+      {/* Floating WhatsApp Button - Cerchio in basso alla pagina */}
       <a 
         href={WHATSAPP_LINK}
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 w-14 h-14 md:w-16 md:h-16 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl z-[11000] hover:scale-110 transition-transform active:scale-95"
+        className="fixed bottom-6 right-6 w-14 h-14 md:w-16 md:h-16 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl z-[11000] hover:scale-110 active:scale-95 transition-all animate-bounce"
         aria-label="Contattaci su WhatsApp"
       >
         <svg className="w-8 h-8 md:w-10 md:h-10 fill-current" viewBox="0 0 24 24">
