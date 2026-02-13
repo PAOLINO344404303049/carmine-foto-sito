@@ -17,7 +17,7 @@ interface DashboardProps {
 const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, navigate, onLogout }) => {
   const [selectedPackage, setSelectedPackage] = useState<PhotoPackage | null>(PRINT_PACKAGES.length === 1 ? PRINT_PACKAGES[0] : null);
   const [localFiles, setLocalFiles] = useState<File[]>([]);
-  const [uploadedPhotos, setUploadedPhotos] = useState<PhotoFile[]>([]);
+  const [uploadedPhotosPreview, setUploadedPhotosPreview] = useState<PhotoFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -25,8 +25,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
-    // 3) Dentro funzione upload: console.log("Uploading file:", file)
-    console.log("Uploading file:", file);
+    console.log("Uploading file to Cloudinary:", file.name);
     
     const formData = new FormData();
     formData.append("file", file);
@@ -37,18 +36,12 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       body: formData,
     });
 
-    // 4) Dopo fetch Cloudinary: console.log("Cloudinary raw response:", response)
-    console.log("Cloudinary raw response:", response);
-
     const data = await response.json();
-    
-    // 5) Dopo response.json(): console.log("Cloudinary data:", data)
-    console.log("Cloudinary data:", data);
+    console.log("Cloudinary response:", data);
 
     if (!response.ok) {
-      // 6) Se response.ok è false: console.error("Cloudinary FAILED:", data); throw new Error(JSON.stringify(data))
-      console.error("Cloudinary FAILED:", data);
-      throw new Error(JSON.stringify(data));
+      console.error("Cloudinary upload FAILED:", data);
+      throw new Error(data.error?.message || "Errore durante l'upload su Cloudinary");
     }
 
     return data.secure_url;
@@ -72,6 +65,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
 
     setLocalFiles(prev => [...prev, ...filesToAdd]);
     
+    // Anteprime locali istantanee
     const newPreviews: PhotoFile[] = filesToAdd.map(file => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
@@ -79,31 +73,29 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       url: URL.createObjectURL(file)
     }));
     
-    setUploadedPhotos(prev => [...prev, ...newPreviews]);
+    setUploadedPhotosPreview(prev => [...prev, ...newPreviews]);
   };
 
   const handleSubmit = async (e: React.MouseEvent | React.FormEvent) => {
     if (e) e.preventDefault();
-    // 1) Dentro handleSubmit: console.log("Submit started")
-    console.log("Submit started");
+    console.log("Inizio processo handleSubmit...");
 
     if (!selectedPackage || localFiles.length === 0) {
-      console.log("Missing package or files. localFiles count:", localFiles.length);
+      console.warn("Dati insufficienti per l'invio:", { selectedPackage, files: localFiles.length });
       return;
     }
     
+    // 4) Bloccare bottone mentre upload in corso
     setIsUploading(true);
-    const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
-      // 2) Prima dell’upload: console.log("Files selected:", files)
-      console.log("Files selected:", localFiles);
-
-      const finalPhotoFiles: PhotoFile[] = [];
+      console.log("File selezionati per l'upload:", localFiles.length);
+      const uploadedUrls: PhotoFile[] = [];
       
+      // 2) Upload Cloudinary: Sequenziale e asincrono
       for (const file of localFiles) {
         const secureUrl = await uploadToCloudinary(file);
-        finalPhotoFiles.push({
+        uploadedUrls.push({
           id: Math.random().toString(36).substr(2, 9),
           name: file.name,
           size: file.size,
@@ -111,42 +103,43 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         });
       }
 
-      // 7) Dopo upload di tutte le immagini: console.log("All URLs:", uploadedUrls)
-      console.log("All URLs:", finalPhotoFiles.map(f => f.url));
+      console.log("Tutti gli upload completati. URL totali:", uploadedUrls.length);
 
-      const newOrder: Order = {
-        id: orderId,
+      const newOrderData: Order = {
+        id: `ORD-${Date.now()}`, // Temporary ID for UI
         userId: user.id,
         userName: user.name,
         userEmail: user.email,
         packageId: selectedPackage.id,
         packageName: selectedPackage.name,
-        photos: finalPhotoFiles,
+        photos: uploadedUrls,
         status: OrderStatus.PENDING_PAYMENT, 
         paymentMethod: PaymentMethod.ONLINE_SUMUP,
         createdAt: new Date().toISOString(),
         total: selectedPackage.price
       };
 
-      // 8) Prima di salvare su Supabase: console.log("Saving to Supabase...")
-      console.log("Saving to Supabase...");
+      // 3) Supabase: Inserire record SOLO DOPO successo dell'upload
+      console.log("Salvataggio ordine su Supabase...");
+      await addOrder(newOrderData);
       
-      await addOrder(newOrder);
-      
+      // 4) Resettare input file e stato dopo successo
       if (fileInputRef.current) fileInputRef.current.value = '';
       setLocalFiles([]);
-      setUploadedPhotos([]);
+      setUploadedPhotosPreview([]);
       
-      alert("Foto inviate con successo!");
+      alert("Foto caricate e ordine salvato con successo!");
       
-      setCurrentOrderId(orderId);
+      // Mostriamo il checkout
+      setCurrentOrderId(newOrderData.id);
       setShowCheckout(true);
       
-      EmailService.sendOrderConfirmation(newOrder);
+      // Invio email simulata (silenzioso)
+      EmailService.sendOrderConfirmation(newOrderData).catch(err => console.error("Email error:", err));
+      
     } catch (error: any) {
-      // 11) In catch: console.error("FINAL ERROR:", error)
-      console.error("FINAL ERROR:", error);
-      alert(error.message || "Si è verificato un errore durante l'invio delle foto.");
+      console.error("ERRORE FINALE NEL FLUSSO:", error);
+      alert("Errore critico: " + (error.message || "Impossibile completare l'operazione. Controlla la console."));
     } finally {
       setIsUploading(false);
     }
@@ -159,6 +152,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
     setIsFinalizing(true);
 
     try {
+      // Nota: lo status 'paid' dipende dal fatto che l'utente clicchi il link
       await updateStatus(currentOrderId, OrderStatus.PAID);
 
       if (!paymentWindow || paymentWindow.closed || typeof paymentWindow.closed === 'undefined') {
@@ -167,9 +161,9 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
       
       setShowCheckout(false);
       setCurrentOrderId(null);
-      alert("Pagamento avviato! Il tuo ordine è stato registrato.");
+      alert("Il tuo ordine è in fase di elaborazione. Grazie!");
     } catch (error) {
-      console.log("Finalize payment error detail:", error);
+      console.error("Errore aggiornamento pagamento:", error);
     } finally {
       setIsFinalizing(false);
     }
@@ -187,7 +181,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
   };
 
   const handleRemovePhoto = (id: string, index: number) => {
-    setUploadedPhotos(prev => prev.filter(p => p.id !== id));
+    setUploadedPhotosPreview(prev => prev.filter(p => p.id !== id));
     setLocalFiles(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -220,7 +214,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                   <div className="flex-grow">
                     <h4 className="font-bold text-lg md:text-xl uppercase tracking-tighter">{selectedPackage.name}</h4>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                      {uploadedPhotos.length} / {selectedPackage.count} foto selezionate
+                      {uploadedPhotosPreview.length} / {selectedPackage.count} foto selezionate
                     </p>
                   </div>
                 </div>
@@ -233,7 +227,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                   {isUploading ? (
                     <div className="flex flex-col items-center">
                         <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Invio in corso (Cloudinary)...</p>
+                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Caricamento su Cloudinary...</p>
                     </div>
                   ) : (
                     <>
@@ -246,9 +240,9 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                   )}
                 </div>
 
-                {uploadedPhotos.length > 0 && (
+                {uploadedPhotosPreview.length > 0 && (
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-                    {uploadedPhotos.map((photo, index) => (
+                    {uploadedPhotosPreview.map((photo, index) => (
                       <div key={photo.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 shadow-sm">
                         <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
                         {!isUploading && (
@@ -261,7 +255,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                   </div>
                 )}
 
-                {uploadedPhotos.length > 0 && (
+                {uploadedPhotosPreview.length > 0 && (
                   <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
                     <p className="text-xl md:text-2xl font-serif font-bold text-black italic">Totale: €{selectedPackage.price}</p>
                     <button 
@@ -269,7 +263,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                       disabled={isUploading}
                       className="w-full sm:w-auto px-12 py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
                     >
-                      {isUploading ? 'Invio in corso...' : 'Invia Foto e Procedi'}
+                      {isUploading ? 'Salvataggio...' : 'Invia Foto e Procedi'}
                     </button>
                   </div>
                 )}
@@ -277,8 +271,8 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
             ) : (
               <div className="space-y-8 py-4">
                 <div className="text-center mb-10">
-                   <h3 className="text-2xl md:text-3xl font-serif mb-4">Ordine Registrato Correttamente!</h3>
-                   <p className="text-gray-500 italic text-sm">Il tuo ordine è stato salvato in Supabase. Completa il pagamento per avviare la stampa professionale.</p>
+                   <h3 className="text-2xl md:text-3xl font-serif mb-4">Ordine Registrato!</h3>
+                   <p className="text-gray-500 italic text-sm">Il tuo ordine è stato salvato correttamente. Procedi al pagamento per avviare la stampa professionale.</p>
                 </div>
                 
                 <div className="max-w-md mx-auto bg-gray-50 p-8 md:p-12 rounded-[50px] border border-gray-100 text-center shadow-lg">
@@ -286,15 +280,15 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                       <i className="fas fa-shield-alt"></i>
                    </div>
                    <h4 className="font-bold text-lg mb-4 uppercase tracking-widest">Pagamento SumUp</h4>
-                   <p className="text-[10px] text-gray-400 mb-10 leading-relaxed font-medium uppercase tracking-widest">
-                      ID Ordine: {currentOrderId}
+                   <p className="text-[10px] text-gray-400 mb-10 leading-relaxed font-medium uppercase tracking-widest leading-loose">
+                      Verrai reindirizzato al portale di pagamento sicuro SumUp.
                    </p>
                    <button 
                     onClick={finalizePayment}
                     disabled={isFinalizing}
                     className="w-full py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-4 disabled:opacity-50"
                    >
-                      {isFinalizing ? 'Aggiornamento...' : 'Paga ora online'}
+                      {isFinalizing ? 'Elaborazione...' : 'Paga ora online'}
                       {!isFinalizing && <i className="fas fa-external-link-alt"></i>}
                    </button>
                 </div>
@@ -328,7 +322,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                 {orders.map(order => (
                   <div key={order.id} className="p-5 border border-gray-100 rounded-2xl bg-gray-50/50">
                     <div className="flex justify-between items-start mb-3">
-                      <span className="text-[8px] font-bold text-gray-300 uppercase tracking-widest">{order.id}</span>
+                      <span className="text-[8px] font-bold text-gray-300 uppercase tracking-widest">ID: {order.id.slice(0, 8)}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase border ${currentStatusColor(order.status)}`}>
                         {order.status}
                       </span>

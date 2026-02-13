@@ -7,17 +7,16 @@ const AUTH_KEY = 'studio_auth_v2';
 const ADMIN_EMAIL = "carminephotography0@gmail.com";
 const ADMIN_PASS = "Carmine01.";
 
+// Interfaccia flessibile per riflettere i campi reali del DB
 interface SupabaseOrder {
   id: string;
-  customer_name: string;
   customer_email: string;
-  package: string;
   photo_urls: string[];
   status: string;
   created_at: string;
-  user_id: string;
-  payment_method: string;
-  total: number;
+  // Campi opzionali per evitare errori se non presenti
+  customer_name?: string;
+  package?: string;
 }
 
 export const useStore = () => {
@@ -47,37 +46,36 @@ export const useStore = () => {
         query = query.eq('customer_email', user.email);
       }
 
-      // Ordinamento per data decrescente
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
-        console.log("Errore reale fetch Supabase:", error);
+        console.error("Errore fetch ordini Supabase:", error);
         return;
       }
 
       if (data) {
         const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item) => ({
           id: item.id,
-          userId: item.user_id,
-          userName: item.customer_name,
+          userId: '', // Non più necessario se usiamo email
+          userName: item.customer_name || item.customer_email.split('@')[0],
           userEmail: item.customer_email,
-          packageId: item.package, 
-          packageName: item.package,
+          packageId: item.package || 'standard', 
+          packageName: item.package || 'Pacchetto Foto',
           photos: (item.photo_urls || []).map((url: string, index: number) => ({
             id: `photo-${index}`,
             name: `Foto ${index + 1}`,
             url: url,
             size: 0
           })),
-          status: item.status as OrderStatus,
-          paymentMethod: (item.payment_method as PaymentMethod) || PaymentMethod.ONLINE_SUMUP,
+          status: (item.status as OrderStatus) || OrderStatus.PENDING_PAYMENT,
+          paymentMethod: PaymentMethod.ONLINE_SUMUP,
           createdAt: item.created_at,
-          total: item.total || 0
+          total: 20 // Default se colonna total assente
         }));
         setOrders(mappedOrders);
       }
     } catch (err) {
-      console.log("Eccezione durante fetch ordini:", err);
+      console.error("Eccezione fetch ordini:", err);
     } finally {
       setLoading(false);
     }
@@ -117,32 +115,26 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
+    // 1) Prepariamo l'oggetto inviando SOLO i campi confermati dall'utente
     const dbOrder = {
-      id: order.id,
-      user_id: order.userId,
-      customer_name: order.userName,
       customer_email: order.userEmail,
-      package: order.packageName,
       photo_urls: order.photos.map(p => p.url),
-      status: order.status, // Sarà "pending"
-      // Fix: order.payment_method was used instead of order.paymentMethod (from Order interface)
-      payment_method: order.paymentMethod || PaymentMethod.ONLINE_SUMUP,
-      total: order.total,
+      status: 'pending',
       created_at: new Date().toISOString()
     };
 
+    console.log("Tentativo inserimento ordine su Supabase:", dbOrder);
+
     const result = await supabase.from('orders').insert([dbOrder]);
 
-    // 9) Dopo insert: console.log("Supabase response:", result)
-    console.log("Supabase response:", result);
+    console.log("Risposta Supabase (Insert):", result);
 
     if (result.error) {
-      // 10) Se Supabase error: console.error("Supabase error:", error); throw error
-      console.error("Supabase error:", result.error);
+      console.error("Errore critico Supabase nell'inserimento:", result.error);
       throw result.error;
     }
 
-    // Refresh ordini dopo inserimento
+    // Refresh ordini per aggiornare la dashboard
     await fetchOrders();
   };
 
@@ -153,7 +145,7 @@ export const useStore = () => {
       .eq('id', orderId);
 
     if (error) {
-      console.log("Errore reale update Supabase:", error);
+      console.error("Errore update status Supabase:", error);
       return;
     }
 
@@ -167,7 +159,7 @@ export const useStore = () => {
       .eq('id', orderId);
 
     if (error) {
-      console.log("Errore reale delete Supabase:", error);
+      console.error("Errore eliminazione ordine Supabase:", error);
       return;
     }
 
