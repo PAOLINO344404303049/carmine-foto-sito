@@ -9,7 +9,7 @@ interface HomeProps {
 
 const Home: FC<HomeProps> = ({ navigate }) => {
   return (
-    <div className="bg-white">
+    <div className="bg-white dark:bg-zinc-950 transition-colors">
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
           <img 
@@ -49,11 +49,11 @@ const Home: FC<HomeProps> = ({ navigate }) => {
         </div>
       </section>
 
-      <section id="services" className="py-24 px-6 bg-white">
+      <section id="services" className="py-24 px-6 bg-white dark:bg-zinc-950 transition-colors">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-serif mb-4 text-black italic">I Nostri Servizi</h2>
-            <div className="w-20 h-1 bg-black mx-auto"></div>
+            <h2 className="text-3xl md:text-5xl font-serif mb-4 text-black dark:text-white italic">I Nostri Servizi</h2>
+            <div className="w-20 h-1 bg-black dark:bg-white mx-auto"></div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div className="group cursor-pointer" onClick={() => navigate('dashboard')}>
@@ -61,34 +61,34 @@ const Home: FC<HomeProps> = ({ navigate }) => {
                 <img src={SERVICE_IMG_PRINT} alt="Stampa Foto" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
               </div>
-              <h3 className="text-2xl font-serif mb-3 italic">Servizio Stampa Foto</h3>
-              <p className="text-gray-500 text-sm leading-relaxed mb-4 italic">Stampe di alta qualità su carta lucida professionale. Colori vibranti e neri profondi per i tuoi ricordi.</p>
-              <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black pb-1 group-hover:pr-4 transition-all italic">Scegli Formato →</span>
+              <h3 className="text-2xl font-serif mb-3 dark:text-white italic">Servizio Stampa Foto</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4 italic">Stampe di alta qualità su carta lucida professionale. Colori vibranti e neri profondi per i tuoi ricordi.</p>
+              <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black dark:border-white dark:text-white pb-1 group-hover:pr-4 transition-all italic">Scegli Formato →</span>
             </div>
             <div className="group cursor-pointer" onClick={() => navigate('packages')}>
               <div className="relative overflow-hidden rounded-[40px] aspect-[4/5] mb-6 shadow-xl">
                 <img src={SERVICE_IMG_100} alt="Pacchetto 100 Foto" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
               </div>
-              <h3 className="text-2xl font-serif mb-3 italic">Pacchetto 100 Foto</h3>
-              <p className="text-gray-500 text-sm leading-relaxed mb-4 italic">La nostra offerta più popolare. 100 stampe professionali ad un prezzo imbattibile per i tuoi eventi.</p>
-              <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black pb-1 group-hover:pr-4 transition-all italic">Vedi Offerta →</span>
+              <h3 className="text-2xl font-serif mb-3 dark:text-white italic">Pacchetto 100 Foto</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4 italic">La nostra offerta più popolare. 100 stampe professionali ad un prezzo imbattibile per i tuoi eventi.</p>
+              <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black dark:border-white dark:text-white pb-1 group-hover:pr-4 transition-all italic">Vedi Offerta →</span>
             </div>
             <div className="group cursor-pointer" onClick={() => navigate('contact')}>
               <div className="relative overflow-hidden rounded-[40px] aspect-[4/5] mb-6 shadow-xl">
                 <img src={SERVICE_IMG_CONSULT} alt="Consulenza" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
               </div>
-              <h3 className="text-2xl font-serif mb-3 italic">Consulenza Personalizzata</h3>
-              <p className="text-gray-500 text-sm leading-relaxed mb-4 italic">Hai bisogno di un servizio fotografico o di stampe speciali? Prenota una consulenza in studio.</p>
-              <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black pb-1 group-hover:pr-4 transition-all italic">Contattaci →</span>
+              <h3 className="text-2xl font-serif mb-3 dark:text-white italic">Consulenza Personalizzata</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4 italic">Hai bisogno di un servizio fotografico o di stampe speciali? Prenota una consulenza in studio.</p>
+              <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black dark:border-white dark:text-white pb-1 group-hover:pr-4 transition-all italic">Contattaci →</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-32 px-6 bg-gray-50 text-center">
-        <div className="max-w-4xl mx-auto bg-black p-16 md:p-24 rounded-[60px] shadow-2xl relative overflow-hidden">
+      <section className="py-32 px-6 bg-gray-50 dark:bg-zinc-900 transition-colors text-center">
+        <div className="max-w-4xl mx-auto bg-black dark:bg-zinc-800 p-16 md:p-24 rounded-[60px] shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
           <h2 className="text-3xl md:text-5xl font-serif text-white mb-8 relative z-10 italic">Pronto a stampare i tuoi momenti migliori?</h2>
           <p className="text-gray-400 mb-12 relative z-10 max-w-xl mx-auto text-lg italic font-light">Unisciti ai nostri clienti e trasforma i tuoi pixel in carta di alta qualità.</p>

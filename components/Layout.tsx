@@ -14,6 +14,7 @@ interface LayoutProps {
 const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Gestione scroll body per menu mobile
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = 'hidden';
@@ -28,8 +29,8 @@ const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-white">
-      <nav className="fixed top-0 left-0 w-full z-[9999] bg-black/80 lg:bg-white border-b border-white/10 lg:border-gray-100 px-4 md:px-6 py-2 md:py-4 shadow-lg transition-colors">
+    <div className="min-h-screen flex flex-col font-sans bg-white dark:bg-zinc-950 transition-colors">
+      <nav className="fixed top-0 left-0 w-full z-[9999] bg-black/80 lg:bg-white lg:dark:bg-zinc-950 border-b border-white/10 lg:border-gray-100 lg:dark:border-zinc-800 px-4 md:px-6 py-2 md:py-4 shadow-lg transition-colors">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div 
             className="cursor-pointer flex items-center group shrink-0"
@@ -38,15 +39,15 @@ const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
             <img 
               src={LOGO_URL} 
               alt="Carmine Felice Napolitano Fotografo – Logo" 
-              className="h-10 md:h-16 w-auto object-contain brightness-0 invert lg:brightness-100 lg:invert-0 transition-all duration-300" 
+              className={`h-10 md:h-16 w-auto object-contain brightness-0 invert lg:brightness-100 lg:invert-0 lg:dark:brightness-0 lg:dark:invert transition-all duration-300`} 
             />
           </div>
 
-          <div className="hidden lg:flex items-center space-x-10 text-[13px] font-bold uppercase tracking-[0.2em] text-gray-500">
-            <button onClick={() => handleNav('home')} className="hover:text-black transition-colors">Home</button>
-            <button onClick={() => handleNav('portfolio')} className="hover:text-black transition-colors">Portfolio</button>
-            <button onClick={() => handleNav('packages')} className="hover:text-black transition-colors">Pacchetti</button>
-            <button onClick={() => handleNav('contact')} className="hover:text-black transition-colors">Contatti</button>
+          <div className="hidden lg:flex items-center space-x-10 text-[13px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+            <button onClick={() => handleNav('home')} className="hover:text-black dark:hover:text-white transition-colors">Home</button>
+            <button onClick={() => handleNav('portfolio')} className="hover:text-black dark:hover:text-white transition-colors">Portfolio</button>
+            <button onClick={() => handleNav('packages')} className="hover:text-black dark:hover:text-white transition-colors">Pacchetti</button>
+            <button onClick={() => handleNav('contact')} className="hover:text-black dark:hover:text-white transition-colors">Contatti</button>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -54,14 +55,14 @@ const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
               {user ? (
                 <button 
                   onClick={() => handleNav(user.role === 'admin' ? 'admin' : 'dashboard')}
-                  className="bg-black text-white px-6 py-2.5 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-md hover:bg-gray-800 transition-all"
+                  className="bg-black dark:bg-white dark:text-black text-white px-6 py-2.5 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-all"
                 >
                   {user.role === 'admin' ? 'AREA ADMIN' : 'I MIEI ORDINI'}
                 </button>
               ) : (
                 <button 
                   onClick={() => handleNav('login')}
-                  className="bg-black text-white px-6 py-2.5 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-md hover:bg-gray-800 transition-all"
+                  className="bg-black dark:bg-white dark:text-black text-white px-6 py-2.5 rounded-full text-[10px] font-bold tracking-widest uppercase shadow-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-all"
                 >
                   ACCESSO
                 </button>
@@ -70,7 +71,7 @@ const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
 
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden w-12 h-12 flex items-center justify-center bg-black rounded-xl z-[10001] relative border-none outline-none"
+              className="lg:hidden w-12 h-12 flex items-center justify-center bg-black dark:bg-zinc-800 rounded-xl z-[10001] relative border-none outline-none"
               aria-label="Menu"
             >
               <div className="relative w-6 h-5">
@@ -82,6 +83,7 @@ const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
           </div>
         </div>
 
+        {/* Mobile Menu Overlay */}
         <div 
           className={`lg:hidden fixed inset-0 bg-black z-[10000] transition-all duration-500 ease-in-out transform ${isMobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}`}
         >
@@ -143,11 +145,11 @@ const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
         </div>
       </nav>
 
-      <main className="flex-grow pt-[64px] lg:pt-0">
+      <main className="flex-grow pt-[64px] lg:pt-0 bg-white dark:bg-zinc-950 transition-colors">
         {children}
       </main>
 
-      <footer className="bg-black text-white pt-24 pb-12 px-6">
+      <footer className="bg-black dark:bg-zinc-950 text-white pt-24 pb-12 px-6 border-t dark:border-zinc-800">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 text-center md:text-left">
           <div className="md:col-span-1">
             <img 

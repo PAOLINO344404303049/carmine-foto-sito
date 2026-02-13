@@ -19,12 +19,9 @@ const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
     if (email && password) {
       setIsLoading(true);
       try {
-        const user = await onLogin(email, password);
-        if (user.role === 'admin') {
-          navigate('admin');
-        } else {
-          navigate('dashboard');
-        }
+        await onLogin(email, password);
+        console.log("[AUTH] Autenticazione completata. Reindirizzamento alla galleria pacchetti.");
+        navigate('packages');
       } catch (error: any) {
         alert("Errore Autenticazione: " + (error.message || "Email o password non corretti."));
       } finally {
@@ -34,11 +31,11 @@ const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6 py-12">
-      <div className="max-w-md w-full bg-white p-10 rounded-3xl shadow-xl border border-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-950 transition-colors px-6 py-12">
+      <div className="max-w-md w-full bg-white dark:bg-zinc-900 p-10 rounded-3xl shadow-xl border border-gray-100 dark:border-zinc-800">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-serif mb-2">{mode === 'login' ? 'Accesso' : 'Crea Account'}</h2>
-          <p className="text-gray-400 text-sm">
+          <h2 className="text-3xl font-serif mb-2 dark:text-white">{mode === 'login' ? 'Accesso' : 'Crea Account'}</h2>
+          <p className="text-gray-400 dark:text-gray-500 text-sm">
             {mode === 'login' 
               ? 'Accedi per gestire i tuoi ordini o il pannello fotografico.' 
               : 'Registrati per iniziare a stampare i tuoi ricordi.'}
@@ -48,33 +45,33 @@ const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {mode === 'register' && (
             <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Nome Completo</label>
+              <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Nome Completo</label>
               <input 
                 type="text" 
-                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black transition-all"
+                className="w-full px-6 py-4 bg-gray-50 dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all"
                 placeholder="Nome e Cognome"
               />
             </div>
           )}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Email</label>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Email</label>
             <input 
               type="email" 
               required 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black transition-all"
+              className="w-full px-6 py-4 bg-gray-50 dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all"
               placeholder="email@esempio.it"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Password</label>
+            <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Password</label>
             <input 
               type="password" 
               required 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black transition-all"
+              className="w-full px-6 py-4 bg-gray-50 dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all"
               placeholder="••••••••"
             />
           </div>
@@ -82,18 +79,18 @@ const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
           <button 
             type="submit"
             disabled={isLoading}
-            className="w-full py-4 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-lg transition-all transform hover:scale-[1.02] disabled:opacity-50"
+            className="w-full py-4 bg-black dark:bg-white dark:text-black text-white rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-200 shadow-lg transition-all transform hover:scale-[1.02] disabled:opacity-50"
           >
             {isLoading ? 'Attendi...' : (mode === 'login' ? 'Entra ora' : 'Registrati')}
           </button>
         </form>
 
         <div className="mt-10 text-center">
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-400 dark:text-gray-500">
             {mode === 'login' ? "Non hai un account?" : "Hai già un account?"}
             <button 
               onClick={() => navigate(mode === 'login' ? 'register' : 'login')}
-              className="ml-2 font-bold text-black hover:underline"
+              className="ml-2 font-bold text-black dark:text-white hover:underline"
             >
               {mode === 'login' ? 'Registrati ora' : 'Accedi'}
             </button>

@@ -27,13 +27,25 @@ body {
   background: #f1f1f1;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #18181b;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #333;
   border-radius: 4px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #000;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }
 
 @keyframes fade-in {
@@ -52,4 +64,11 @@ body {
 
 .animate-fade-in-up {
   animation: fade-in-up 0.8s ease-out forwards;
+}
+
+/* Transition for theme switching */
+.transition-colors {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
 }

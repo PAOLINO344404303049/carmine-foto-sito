@@ -9,7 +9,7 @@ interface PortfolioProps {
 
 const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-zinc-900 dark:bg-zinc-950 transition-colors">
       <div className="fixed inset-0 z-0">
         <img 
           src={PORTFOLIO_BG_URL} 

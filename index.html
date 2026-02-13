@@ -6,6 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carmine Felice Napolitano – Fotografo</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+    
+    // Funzione per applicare il tema in base alle preferenze del sistema
+    function applySystemTheme() {
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+    
+    // Esecuzione immediata per evitare FOUC
+    applySystemTheme();
+    
+    // Ascolta i cambiamenti di preferenza del sistema in tempo reale
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applySystemTheme);
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -26,7 +46,7 @@
 }
 </script>
 </head>
-<body class="bg-white text-gray-900">
+<body class="bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
