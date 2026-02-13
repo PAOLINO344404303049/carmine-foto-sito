@@ -1,10 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { User, Order, OrderStatus } from '../types';
+import { supabase } from './supabase';
 
-const ORDERS_KEY = 'studio_orders_v2';
 const AUTH_KEY = 'studio_auth_v2';
-
 const ADMIN_EMAIL = "carminephotography0@gmail.com";
 const ADMIN_PASS = "Carmine01.";
 
@@ -14,10 +13,52 @@ export const useStore = () => {
     return stored ? JSON.parse(stored) : null;
   });
 
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const stored = localStorage.getItem(ORDERS_KEY);
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Carica gli ordini da Supabase quando l'utente è loggato
+  useEffect(() => {
+    if (user) {
+      fetchOrders();
+    }
+  }, [user]);
+
+  const fetchOrders = async () => {
+    if (!user) return;
+    setLoading(true);
+    
+    let query = supabase.from('orders').select('*');
+    
+    // Se non è admin, filtra per la propria email
+    if (user.role !== 'admin') {
+      query = query.eq('user_email', user.email);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (!error && data) {
+      const mappedOrders: Order[] = data.map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        userName: item.customer_name,
+        userEmail: item.user_email,
+        packageId: item.package_id,
+        packageName: item.package_name,
+        photos: item.photo_urls.map((url: string, index: number) => ({
+          id: `photo-${index}`,
+          name: `Foto ${index + 1}`,
+          url: url,
+          size: 0
+        })),
+        status: item.status as OrderStatus,
+        paymentMethod: item.payment_method,
+        createdAt: item.created_at,
+        total: item.total
+      }));
+      setOrders(mappedOrders);
+    }
+    setLoading(false);
+  };
 
   const login = (email: string, pass: string) => {
     if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
@@ -49,58 +90,62 @@ export const useStore = () => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem(AUTH_KEY);
+    setOrders([]);
   };
 
-  const addOrder = (order: Order) => {
-    const updatedOrders = [order, ...orders];
-    setOrders(updatedOrders);
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(updatedOrders));
-  };
+  const addOrder = async (order: Order) => {
+    const { error } = await supabase.from('orders').insert([{
+      id: order.id,
+      user_id: order.userId,
+      customer_name: order.userName,
+      user_email: order.userEmail,
+      package_id: order.packageId,
+      package_name: order.packageName,
+      photo_urls: order.photos.map(p => p.url),
+      status: order.status,
+      payment_method: order.paymentMethod,
+      total: order.total,
+      created_at: new Date().toISOString()
+    }]);
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    const updated = orders.map(o => o.id === orderId ? { ...o, status } : o);
-    setOrders(updated);
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(updated));
-  };
-
-  /**
-   * ELIMINAZIONE REALE E PERMANENTE
-   * Questo metodo agisce come un database reale rimuovendo la chiave dal localStorage.
-   */
-  const deleteOrder = (orderId: string) => {
-    // 1. Identifica l'ordine
-    const orderToDelete = orders.find(o => o.id === orderId);
-    
-    if (orderToDelete) {
-      // 2. Elimina i file fisici (filesystem virtuale del browser / Blob cache)
-      orderToDelete.photos.forEach(photo => {
-        if (photo.url.startsWith('blob:')) {
-          URL.revokeObjectURL(photo.url);
-        }
-      });
+    if (!error) {
+      await fetchOrders();
+    } else {
+      console.error("Errore salvataggio Supabase:", error);
     }
+  };
 
-    // 3. Rimuovi l'ordine dall'array in memoria
-    const remainingOrders = orders.filter(o => o.id !== orderId);
-    
-    // 4. Aggiorna lo stato per il re-render immediato della UI
-    setOrders(remainingOrders);
-    
-    // 5. Persisti la modifica nel database locale (localStorage)
-    // Questo garantisce che al refresh l'ordine sia scomparso per sempre.
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(remainingOrders));
-    
-    console.log(`[STORAGE] Ordine ${orderId} rimosso permanentemente.`);
-    return { success: true };
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', orderId);
+
+    if (!error) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    }
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (!error) {
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+    }
   };
 
   return {
     user,
     orders,
+    loading,
     login,
     logout,
     addOrder,
     updateOrderStatus,
-    deleteOrder
+    deleteOrder,
+    fetchOrders
   };
 };

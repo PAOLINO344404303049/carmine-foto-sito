@@ -12,67 +12,106 @@ interface DashboardProps {
   onLogout: () => void;
 }
 
+const CLOUDINARY_UPLOAD_PRESET = 'fotocs';
+const CLOUDINARY_CLOUD_NAME = 'divyx0t5b';
+
 const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLogout }) => {
   const [selectedPackage, setSelectedPackage] = useState<PhotoPackage | null>(PRINT_PACKAGES.length === 1 ? PRINT_PACKAGES[0] : null);
   const [uploadedPhotos, setUploadedPhotos] = useState<PhotoFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error('Errore durante l\'upload su Cloudinary');
+    const data = await response.json();
+    return data.secure_url;
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !selectedPackage) return;
     
     setIsUploading(true);
     
-    setTimeout(() => {
-      const newPhotos: PhotoFile[] = Array.from(files).map((file: any) => ({
-        id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        size: file.size,
-        url: URL.createObjectURL(file)
-      }));
-      
+    try {
       const totalAllowed = selectedPackage.count;
       const currentCount = uploadedPhotos.length;
       const remaining = Math.max(0, totalAllowed - currentCount);
       
+      const filesToUpload = Array.from(files).slice(0, remaining);
+      
       if (remaining === 0) {
         alert(`Hai già raggiunto il limite di ${totalAllowed} foto.`);
-      } else {
-        setUploadedPhotos([...uploadedPhotos, ...newPhotos.slice(0, remaining)]);
+        setIsUploading(false);
+        return;
       }
+
+      const uploadPromises = filesToUpload.map(async (file) => {
+        const url = await uploadToCloudinary(file);
+        return {
+          id: Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          size: file.size,
+          url: url
+        };
+      });
+
+      const newPhotoFiles = await Promise.all(uploadPromises);
+      setUploadedPhotos(prev => [...prev, ...newPhotoFiles]);
+      
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Si è verificato un errore durante il caricamento delle immagini.");
+    } finally {
       setIsUploading(false);
-    }, 1500);
+    }
   };
 
   const finalizeOrder = async () => {
     if (!selectedPackage || uploadedPhotos.length === 0) return;
+    setIsFinalizing(true);
 
-    const newOrder: Order = {
-      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      userId: user.id,
-      userName: user.name,
-      userEmail: user.email,
-      packageId: selectedPackage.id,
-      packageName: selectedPackage.name,
-      photos: uploadedPhotos,
-      status: OrderStatus.PENDING,
-      paymentMethod: PaymentMethod.ONLINE_SUMUP,
-      createdAt: new Date().toISOString(),
-      total: selectedPackage.price
-    };
+    try {
+      const newOrder: Order = {
+        id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        packageId: selectedPackage.id,
+        packageName: selectedPackage.name,
+        photos: uploadedPhotos,
+        status: OrderStatus.PENDING,
+        paymentMethod: PaymentMethod.ONLINE_SUMUP,
+        createdAt: new Date().toISOString(),
+        total: selectedPackage.price
+      };
 
-    addOrder(newOrder);
-    
-    // Invio Email di Conferma
-    EmailService.sendOrderConfirmation(newOrder);
+      await addOrder(newOrder);
+      
+      // Invio Email di Conferma
+      EmailService.sendOrderConfirmation(newOrder);
 
-    window.open(SUMUP_PAY_LINK, '_blank');
-    
-    setUploadedPhotos([]);
-    setShowCheckout(false);
-    alert("Pratica inviata! Abbiamo inviato una mail di conferma a " + user.email + ". Completa ora il pagamento sicuro su SumUp.");
+      window.open(SUMUP_PAY_LINK, '_blank');
+      
+      setUploadedPhotos([]);
+      setShowCheckout(false);
+      alert("Pratica inviata con successo! Le tue foto sono state salvate nel database. Abbiamo inviato una mail di conferma a " + user.email + ".");
+    } catch (error) {
+      alert("Errore durante il salvataggio dell'ordine.");
+    } finally {
+      setIsFinalizing(false);
+    }
   };
 
   const currentStatusColor = (status: OrderStatus) => {
@@ -122,14 +161,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
                 </div>
 
                 <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-[40px] p-8 md:p-16 text-center cursor-pointer transition-all ${isUploading ? 'bg-gray-100 opacity-50 pointer-events-none' : 'hover:bg-gray-50/80 hover:border-black bg-gray-50/30 border-gray-200'}`}
+                  onClick={() => !isUploading && fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-[40px] p-8 md:p-16 text-center cursor-pointer transition-all ${isUploading ? 'bg-gray-100 opacity-70 pointer-events-none' : 'hover:bg-gray-50/80 hover:border-black bg-gray-50/30 border-gray-200'}`}
                 >
                   <input type="file" multiple accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
                   {isUploading ? (
                     <div className="flex flex-col items-center">
                         <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Elaborazione file...</p>
+                        <p className="font-bold uppercase tracking-[0.2em] text-[10px]">Caricamento su Cloudinary...</p>
                     </div>
                   ) : (
                     <>
@@ -187,10 +226,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
                    </p>
                    <button 
                     onClick={finalizeOrder}
-                    className="w-full py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-4"
+                    disabled={isFinalizing}
+                    className="w-full py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-4 disabled:opacity-50"
                    >
-                      <span>Paga ora online</span>
-                      <i className="fas fa-external-link-alt"></i>
+                      {isFinalizing ? 'Salvataggio in corso...' : 'Paga ora online'}
+                      {!isFinalizing && <i className="fas fa-external-link-alt"></i>}
                    </button>
                 </div>
               </div>
@@ -230,6 +270,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, orders, addOrder, navigate,
                     </div>
                     <p className="font-bold text-xs text-gray-900 mb-1">{order.packageName}</p>
                     <p className="text-[8px] text-gray-400 uppercase font-bold tracking-widest">{order.photos.length} Foto &bull; €{order.total}</p>
+                    <p className="text-[7px] text-gray-300 mt-2">{new Date(order.createdAt).toLocaleDateString()}</p>
                   </div>
                 ))}
               </div>
