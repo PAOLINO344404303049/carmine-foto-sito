@@ -7,10 +7,6 @@ const AUTH_KEY = 'studio_auth_v2';
 const ADMIN_EMAIL = "carminephotography0@gmail.com";
 const ADMIN_PASS = "Carmine01.";
 
-/**
- * Definizione dell'interfaccia per gli ordini su Supabase
- * Allineata esattamente ai nomi dei campi richiesti dal backend.
- */
 interface SupabaseOrder {
   id?: string;
   customer_name: string;
@@ -46,7 +42,6 @@ export const useStore = () => {
     try {
       let query = supabase.from('orders').select('*');
       
-      // Admin vede tutto, il Cliente vede solo i propri ordini filtrati per email
       if (user.role !== 'admin') {
         query = query.eq('customer_email', user.email);
       }
@@ -115,7 +110,6 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    // Salvataggio nel database con i campi richiesti
     const dbOrder: SupabaseOrder = {
       id: order.id,
       user_id: order.userId,

@@ -1,6 +1,7 @@
 
 export enum OrderStatus {
-  PENDING = 'In attesa',
+  PENDING_PAYMENT = 'In sospeso',
+  PAID = 'Pagato',
   PROCESSING = 'In lavorazione',
   PRINTED = 'Stampato',
   COLLECTED = 'Ritirato'
@@ -38,7 +39,7 @@ export interface Order {
   id: string;
   userId: string;
   userName: string;
-  userEmail: string; // Aggiunto per notifiche
+  userEmail: string;
   packageId: string;
   packageName: string;
   photos: PhotoFile[];

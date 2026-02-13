@@ -9,6 +9,7 @@ interface DashboardProps {
   user: User;
   orders: Order[];
   addOrder: (order: Order) => Promise<void>;
+  updateStatus?: (orderId: string, status: OrderStatus) => Promise<void>;
   navigate: (page: string) => void;
   onLogout: () => void;
 }
@@ -16,12 +17,14 @@ interface DashboardProps {
 const CLOUDINARY_UPLOAD_PRESET = 'fotocs';
 const CLOUDINARY_CLOUD_NAME = 'divyx0t5b';
 
-const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLogout }) => {
+const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, navigate, onLogout }) => {
   const [selectedPackage, setSelectedPackage] = useState<PhotoPackage | null>(PRINT_PACKAGES.length === 1 ? PRINT_PACKAGES[0] : null);
   const [uploadedPhotos, setUploadedPhotos] = useState<PhotoFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadToCloudinary = async (file: File): Promise<string> => {
@@ -83,30 +86,55 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLog
     }
   };
 
-  const finalizeOrder = async () => {
+  const handleSaveOrder = async () => {
     if (!selectedPackage || uploadedPhotos.length === 0) return;
-
-    const paymentWindow = window.open(SUMUP_PAY_LINK, '_blank');
     
-    setIsFinalizing(true);
+    setIsSaving(true);
+    const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
     try {
       const newOrder: Order = {
-        id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+        id: orderId,
         userId: user.id,
         userName: user.name,
         userEmail: user.email,
         packageId: selectedPackage.id,
         packageName: selectedPackage.name,
         photos: uploadedPhotos,
-        status: OrderStatus.PENDING,
+        status: OrderStatus.PENDING_PAYMENT,
         paymentMethod: PaymentMethod.ONLINE_SUMUP,
         createdAt: new Date().toISOString(),
         total: selectedPackage.price
       };
 
       await addOrder(newOrder);
-      await EmailService.sendOrderConfirmation(newOrder);
+      setCurrentOrderId(orderId);
+      setShowCheckout(true);
+      
+      // Email di notifica "Ordine ricevuto"
+      EmailService.sendOrderConfirmation(newOrder);
+
+    } catch (error) {
+      console.error("Save order error:", error);
+      alert("Errore durante il salvataggio dei file. Riprova.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const finalizePayment = async () => {
+    if (!currentOrderId) return;
+
+    // APERTURA IMMEDIATA LINK SUMUP
+    const paymentWindow = window.open(SUMUP_PAY_LINK, '_blank');
+    
+    setIsFinalizing(true);
+
+    try {
+      // Aggiorna lo stato su Supabase a "Pagato"
+      if (updateStatus) {
+        await updateStatus(currentOrderId, OrderStatus.PAID);
+      }
 
       if (!paymentWindow || paymentWindow.closed || typeof paymentWindow.closed === 'undefined') {
         window.open(SUMUP_PAY_LINK, '_blank');
@@ -114,10 +142,11 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLog
       
       setUploadedPhotos([]);
       setShowCheckout(false);
-      alert("Ordine inviato con successo! Riceverai una mail di conferma brevemente.");
+      setCurrentOrderId(null);
+      alert("Pagamento avviato! L'ordine è stato aggiornato come 'Pagato'. Riceverai aggiornamenti via email.");
     } catch (error) {
-      console.error("Order finalization error:", error);
-      alert("Errore durante il salvataggio dell'ordine.");
+      console.error("Finalize payment error:", error);
+      alert("Errore durante l'aggiornamento dello stato del pagamento.");
     } finally {
       setIsFinalizing(false);
     }
@@ -125,10 +154,11 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLog
 
   const currentStatusColor = (status: OrderStatus) => {
     switch (status) {
-      case OrderStatus.PENDING: return 'bg-yellow-100 text-yellow-700';
+      case OrderStatus.PENDING_PAYMENT: return 'bg-orange-100 text-orange-700';
+      case OrderStatus.PAID: return 'bg-green-100 text-green-700';
       case OrderStatus.PROCESSING: return 'bg-blue-100 text-blue-700';
       case OrderStatus.PRINTED: return 'bg-purple-100 text-purple-700';
-      case OrderStatus.COLLECTED: return 'bg-green-100 text-green-700';
+      case OrderStatus.COLLECTED: return 'bg-emerald-100 text-emerald-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -205,22 +235,20 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLog
                   <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
                     <p className="text-xl md:text-2xl font-serif font-bold text-black italic">Totale: €{selectedPackage.price}</p>
                     <button 
-                      onClick={() => setShowCheckout(true)} 
-                      className="w-full sm:w-auto px-12 py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px]"
+                      onClick={handleSaveOrder} 
+                      disabled={isSaving || isUploading}
+                      className="w-full sm:w-auto px-12 py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
                     >
-                      Procedi al Pagamento
+                      {isSaving ? 'Salvataggio...' : 'Invia Foto e Procedi'}
                     </button>
                   </div>
                 )}
               </div>
             ) : (
               <div className="space-y-8 py-4">
-                <button onClick={() => setShowCheckout(false)} className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black">
-                  <i className="fas fa-arrow-left mr-2"></i> Torna ai file
-                </button>
                 <div className="text-center mb-10">
-                   <h3 className="text-2xl md:text-3xl font-serif mb-4">Pagamento Sicuro SumUp</h3>
-                   <p className="text-gray-500 italic text-sm">Saldando online l'ordine entrerà immediatamente in lavorazione.</p>
+                   <h3 className="text-2xl md:text-3xl font-serif mb-4">File Caricati Correttamente!</h3>
+                   <p className="text-gray-500 italic text-sm">Le tue foto sono state salvate. Completa il pagamento per avviare la stampa.</p>
                 </div>
                 
                 <div className="max-w-md mx-auto bg-gray-50 p-8 md:p-12 rounded-[50px] border border-gray-100 text-center shadow-lg">
@@ -229,14 +257,14 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, navigate, onLog
                    </div>
                    <h4 className="font-bold text-lg mb-4 uppercase tracking-widest">Circuito SumUp Sicuro</h4>
                    <p className="text-[10px] text-gray-400 mb-10 leading-relaxed font-medium uppercase tracking-widest">
-                      Il ritiro in studio è possibile solo previo pagamento anticipato.
+                      Il tuo ordine #{currentOrderId} è in attesa di pagamento.
                    </p>
                    <button 
-                    onClick={finalizeOrder}
+                    onClick={finalizePayment}
                     disabled={isFinalizing}
                     className="w-full py-5 bg-black text-white rounded-full font-bold hover:bg-gray-800 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-4 disabled:opacity-50"
                    >
-                      {isFinalizing ? 'Salvataggio in corso...' : 'Paga ora online'}
+                      {isFinalizing ? 'Aggiornamento...' : 'Paga ora online'}
                       {!isFinalizing && <i className="fas fa-external-link-alt"></i>}
                    </button>
                 </div>
