@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { useState, type FC } from 'react';
-import { Order, OrderStatus } from '../types';
+import { Order, OrderStatus, OrderStatusLabels } from '../types';
 import * as JSZip from 'jszip';
 import { EmailService } from '../services/email';
 
@@ -112,7 +112,7 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
             <button onClick={() => setFilter('all')} className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all ${filter === 'all' ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white dark:bg-zinc-900 text-gray-400 dark:text-gray-500'}`}>TUTTI ({orders.length})</button>
             {Object.values(OrderStatus).map(status => (
               <button key={status} onClick={() => setFilter(status)} className={`px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm transition-all ${filter === status ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white dark:bg-zinc-900 text-gray-400 dark:text-gray-500'}`}>
-                {status.toUpperCase()} ({orders.filter(o => o.status === status).length})
+                {OrderStatusLabels[status].toUpperCase()} ({orders.filter(o => o.status === status).length})
               </button>
             ))}
         </div>
@@ -127,7 +127,7 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
             {filteredOrders.map(order => (
               <div key={order.id} className="bg-white dark:bg-zinc-900 p-6 md:p-8 rounded-[32px] shadow-sm border border-gray-100 dark:border-zinc-800 flex flex-col md:flex-row md:items-center gap-8 relative overflow-hidden">
                 <div className="md:w-1/4">
-                  <span className="text-[9px] font-bold text-gray-300 dark:text-zinc-600 uppercase block mb-1">Order ID: {order.id}</span>
+                  <span className="text-[9px] font-bold text-gray-300 dark:text-zinc-600 uppercase block mb-1">ID Ordine: {order.id}</span>
                   <h3 className="font-bold text-xl text-black dark:text-white leading-tight mb-1 uppercase">{order.userName}</h3>
                   <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">{order.userEmail}</p>
                 </div>
@@ -145,7 +145,7 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
                       onChange={(e) => handleStatusChange(order.id, e.target.value as OrderStatus)}
                       className={`px-6 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest cursor-pointer border-2 bg-white dark:bg-zinc-800 transition-colors ${getStatusBadgeClass(order.status)}`}
                     >
-                      {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                      {Object.entries(OrderStatusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
                    </select>
                    
                    <button 

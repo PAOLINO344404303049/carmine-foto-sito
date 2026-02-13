@@ -7,6 +7,14 @@ export enum OrderStatus {
   COLLECTED = 'collected'
 }
 
+export const OrderStatusLabels: Record<OrderStatus, string> = {
+  [OrderStatus.PENDING_PAYMENT]: 'In attesa',
+  [OrderStatus.PAID]: 'Ricevuto',
+  [OrderStatus.PROCESSING]: 'In lavorazione',
+  [OrderStatus.PRINTED]: 'Pronto',
+  [OrderStatus.COLLECTED]: 'Ritirato'
+};
+
 export enum PaymentMethod {
   AT_COLLECTION = 'Paga al ritiro',
   ONLINE_SUMUP = 'Paga online (SumUp)'

@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { useState, useRef, type FC } from 'react';
-import { User, PhotoPackage, PhotoFile, Order, OrderStatus, PaymentMethod } from '../types';
+import { User, PhotoPackage, PhotoFile, Order, OrderStatus, PaymentMethod, OrderStatusLabels } from '../types';
 import { PRINT_PACKAGES, SUMUP_PAY_LINK } from '../constants';
 import { EmailService } from '../services/email';
 
@@ -281,7 +281,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                     <div className="flex justify-between items-start mb-3">
                       <span className="text-[8px] font-bold text-gray-300 dark:text-zinc-600 uppercase tracking-widest">ID: {order.id.slice(0, 8)}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase border ${currentStatusColor(order.status)}`}>
-                        {order.status}
+                        {OrderStatusLabels[order.status] || order.status}
                       </span>
                     </div>
                     <p className="font-bold text-xs text-gray-900 dark:text-white mb-1 italic">{order.packageName}</p>
