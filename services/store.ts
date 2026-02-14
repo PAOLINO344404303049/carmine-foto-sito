@@ -59,7 +59,6 @@ export const useStore = () => {
           packageId: 'standard_100', 
           packageName: 'Pacchetto 100 Foto',
           photos: (item.photo_urls || []).map((url: string, index: number) => {
-            // Estraiamo l'estensione dall'URL di Cloudinary per garantire che lo ZIP sia leggibile
             const extension = url.split('.').pop()?.split('?')[0] || 'jpg';
             return {
               id: `photo-${index}`,
@@ -140,19 +139,20 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
+    // Sincronizzazione con il formato record previsto dai webhook: customer_email, photo_urls, status
     const dbOrder = {
       customer_email: order.userEmail.toLowerCase(),
       photo_urls: order.photos.map(p => p.url),
-      status: 'pending',
+      status: OrderStatus.PENDING_PAYMENT, // Imposta automaticamente status = 'PENDING'
       created_at: new Date().toISOString()
     };
 
-    console.log("[STORE] Invio dati a Supabase (Tabella orders):", dbOrder);
+    console.log("[STORE] Invio dati a Supabase (payload.record):", dbOrder);
 
     const { data, error } = await supabase.from('orders').insert([dbOrder]).select();
 
     if (error) {
-      console.error("[STORE] Errore salvataggio Supabase (RLS o Schema):", error);
+      console.error("[STORE] Errore salvataggio Supabase:", error);
       throw error;
     }
 
@@ -163,6 +163,8 @@ export const useStore = () => {
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     console.log(`[STORE] Aggiornamento status ordine ${orderId} a ${status}`);
+    
+    // Esegue solo l'UPDATE della colonna status come richiesto
     const { error } = await supabase
       .from('orders')
       .update({ status })

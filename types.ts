@@ -1,10 +1,10 @@
 
 export enum OrderStatus {
-  PENDING_PAYMENT = 'pending',
-  PAID = 'paid',
-  PROCESSING = 'processing',
-  PRINTED = 'printed',
-  COLLECTED = 'collected'
+  PENDING_PAYMENT = 'PENDING',
+  PAID = 'RECEIVED',
+  PROCESSING = 'PROCESSING',
+  PRINTED = 'READY',
+  COLLECTED = 'COLLECTED'
 }
 
 export const OrderStatusLabels: Record<OrderStatus, string> = {
