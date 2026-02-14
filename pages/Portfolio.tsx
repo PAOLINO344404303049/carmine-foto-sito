@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { type FC, useEffect, useState } from 'react';
+import { type FC } from 'react';
 import { PORTFOLIO_BG_URL, CARMINE_PHOTO_URL, SHOTS_GALLERY } from '../constants';
 
 interface PortfolioProps {
@@ -8,31 +8,6 @@ interface PortfolioProps {
 }
 
 const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
-  const [gallery, setGallery] = useState<string[]>(SHOTS_GALLERY);
-
-  useEffect(() => {
-    // Logica per cambiare le immagini dinamicamente tramite link (query params)
-    // Esempio: ?shot0=https://link.com&shot1=...
-    const params = new URLSearchParams(window.location.search);
-    let updated = false;
-    const newGallery = [...SHOTS_GALLERY];
-
-    newGallery.forEach((originalUrl, index) => {
-      const overrideUrl = params.get(`shot${index}`);
-      if (overrideUrl) {
-        newGallery[index] = overrideUrl;
-        updated = true;
-        console.log(`📸 Portfolio Image Updated: [${index}] → [${overrideUrl}]`);
-      }
-    });
-
-    if (updated) {
-      setGallery(newGallery);
-    } else {
-      console.log("📸 Portfolio Initialized with 12 images.");
-    }
-  }, []);
-
   return (
     <div className="relative min-h-screen flex flex-col items-center overflow-x-hidden bg-zinc-900 dark:bg-zinc-950 transition-colors">
       <div className="fixed inset-0 z-0">
@@ -80,7 +55,7 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
                   Ambizioso e determinato, mi impegno costantemente per migliorare le mie capacità e offrire ai miei clienti servizi sempre più eccellenti ed emozionanti.
                 </p>
                 <p>
-                  Il mio approccio alla fotografia si ispira allo stile reportage, indugiando sulla spontaneità e l'autenticità che sono al centro di ogni immagine.
+                  Il mio approccio alla fotografia si ispira allo stile reportage, dove la spontaneità e l'autenticità sono al centro di ogni immagine.
                 </p>
                 <p className="pt-6 border-t border-white/10 italic text-white/80">
                   Spero di avere l'opportunità di condividere con voi la mia passione per la fotografia e di poter catturare insieme momenti indimenticabili.
@@ -120,7 +95,7 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {gallery.map((url, index) => (
+          {SHOTS_GALLERY.map((url, index) => (
             <div 
               key={index} 
               className="group relative aspect-[4/5] overflow-hidden rounded-[30px] border border-white/10 shadow-2xl bg-white/5 animate-fade-in-up"
