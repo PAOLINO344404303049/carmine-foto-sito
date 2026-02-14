@@ -7,8 +7,12 @@ import { serve } from "@supabase/functions";
  * Mittente autorizzato Resend: onboarding@resend.dev
  */
 
-// Declaring Deno global to resolve TypeScript error in the edge function environment
-declare const Deno: any;
+// Declaring Deno global for TypeScript compatibility in edge environments
+declare const Deno: {
+  env: {
+    get(key: string): string | undefined;
+  };
+};
 
 interface OrderRecord {
   id: string;
@@ -28,7 +32,7 @@ const corsHeaders = {
 };
 
 serve(async (req: Request) => {
-  // Gestione delle richieste OPTIONS per CORS
+  // Gestione delle richieste OPTIONS per CORS (Preflight)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -130,11 +134,18 @@ serve(async (req: Request) => {
     }
 
   } catch (err: unknown) {
-    const error = err instanceof Error ? err : new Error(String(err));
-    console.error("Errore generico nell'esecuzione della Edge Function:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    if (err instanceof Error) {
+      console.error("Errore Edge Function:", err.message);
+      return new Response(JSON.stringify({ error: err.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    } else {
+      console.error("Errore sconosciuto:", err);
+      return new Response(JSON.stringify({ error: "Unknown error occurred" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
   }
 });
