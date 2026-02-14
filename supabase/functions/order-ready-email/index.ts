@@ -1,4 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+import { serve } from "@supabase/functions";
 
 /**
  * Supabase Edge Function: order-ready-email
@@ -9,21 +10,31 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 // Declaring Deno global to resolve TypeScript error in the edge function environment
 declare const Deno: any;
 
+interface OrderRecord {
+  id: string;
+  customer_email: string;
+  status: string;
+}
+
+interface WebhookPayload {
+  record: OrderRecord;
+}
+
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
-serve(async (req) => {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req: Request) => {
   // Gestione delle richieste OPTIONS per CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
-      headers: { 
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      } 
-    });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const payload = await req.json();
+    const payload: WebhookPayload = await req.json();
     console.log("Payload Webhook ricevuto:", JSON.stringify(payload, null, 2));
 
     const { record } = payload;
@@ -33,17 +44,16 @@ serve(async (req) => {
       console.error("Errore: Nessun record trovato nel payload.");
       return new Response(JSON.stringify({ error: "Missing record" }), { 
         status: 400, 
-        headers: { "Content-Type": "application/json" } 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
 
-    // 2. Controllo Stato: invio solo se lo stato è 'READY'
-    // Nota: Nel sistema, lo stato 'READY' corrisponde all'ordine stampato e pronto al ritiro.
-    if (record.status !== 'READY') {
+    // 2. Controllo Stato: invio solo se lo stato è 'READY' o 'PRONTO'
+    if (record.status !== 'READY' && record.status !== 'PRONTO') {
       console.log(`Info: Ordine ${record.id} in stato '${record.status}'. Email non inviata.`);
-      return new Response(JSON.stringify({ success: true, message: "Status is not READY. Skip email." }), { 
+      return new Response(JSON.stringify({ success: true, message: "Status is not READY or PRONTO. Skip email." }), { 
         status: 200, 
-        headers: { "Content-Type": "application/json" } 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
 
@@ -53,7 +63,7 @@ serve(async (req) => {
       console.error(`Errore: Indirizzo email '${email}' non valido per l'ordine ${record.id}.`);
       return new Response(JSON.stringify({ error: "Invalid customer_email" }), { 
         status: 400, 
-        headers: { "Content-Type": "application/json" } 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
 
@@ -109,21 +119,22 @@ serve(async (req) => {
       console.log(`Successo: Email inviata a ${email}. ID Transazione: ${resendResult.id}`);
       return new Response(JSON.stringify({ success: true, id: resendResult.id }), {
         status: 200,
-        headers: { "Content-Type": "application/json" }
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     } else {
       console.error("Errore API Resend:", JSON.stringify(resendResult));
       return new Response(JSON.stringify({ success: false, error: resendResult }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
+        status: resendResponse.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-  } catch (error) {
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err : new Error(String(err));
     console.error("Errore generico nell'esecuzione della Edge Function:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { "Content-Type": "application/json" }
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
 });
