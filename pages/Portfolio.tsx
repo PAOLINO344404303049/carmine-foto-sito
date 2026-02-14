@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { type FC } from 'react';
+import { type FC, useEffect, useState } from 'react';
 import { PORTFOLIO_BG_URL, CARMINE_PHOTO_URL, SHOTS_GALLERY } from '../constants';
 
 interface PortfolioProps {
@@ -8,6 +8,33 @@ interface PortfolioProps {
 }
 
 const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
+  const [images, setImages] = useState<string[]>(SHOTS_GALLERY);
+
+  useEffect(() => {
+    // Gestione dell'override delle immagini tramite URL e logging
+    const params = new URLSearchParams(window.location.search);
+    const updatedImages = [...SHOTS_GALLERY];
+    let hasChanges = false;
+
+    // Logghiamo tutte le 12 immagini e verifichiamo se ci sono parametri nell'URL
+    for (let i = 1; i <= 12; i++) {
+      const overrideUrl = params.get(`photo${i}`);
+      const currentUrl = overrideUrl || SHOTS_GALLERY[i - 1];
+      
+      if (overrideUrl) {
+        updatedImages[i - 1] = overrideUrl;
+        hasChanges = true;
+      }
+      
+      // Log richiesto: 📸 photoX: [link immagine]
+      console.log(`📸 photo${i}: ${currentUrl}`);
+    }
+
+    if (hasChanges) {
+      setImages(updatedImages);
+    }
+  }, []);
+
   return (
     <div className="relative min-h-screen flex flex-col items-center overflow-x-hidden bg-zinc-900 dark:bg-zinc-950 transition-colors">
       <div className="fixed inset-0 z-0">
@@ -46,7 +73,7 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
                   Sono <strong className="text-white font-bold">Carmine Felice Napolitano</strong>, fotografo specializzato in matrimoni ed eventi, e da ben 12 anni mi immergo con passione e dedizione nel meraviglioso mondo della fotografia.
                 </p>
                 <p>
-                  Per me, la fotografia non è solo un lavoro, ma una vera e propria vocazione. Ogni scatto che catturo racconta una storia, trasmette un'emozione e testimonia un momento prezioso nella vita delle persone che fotografo.
+                  Per me, la fotografia non è solo un lavoro, ma una vera e propria vocazione. Ogni scatto che catturo racconta una story, trasmette un'emozione e testimonia un momento prezioso nella vita delle persone che fotografo.
                 </p>
                 <p>
                   La mia esperienza nel settore wedding ed eventi mi ha permesso di affinare le mie abilità nel catturare istanti unici e irripetibili, dando vita a immagini che narrano con autenticità e stile il vostro giorno speciale.
@@ -87,7 +114,7 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
         </div>
       </div>
 
-      {/* New Section: I Miei Scatti 📷 */}
+      {/* Sezione Portfolio: I Miei Scatti 📷 */}
       <section className="relative z-10 w-full max-w-7xl px-4 pb-24 md:pb-32">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-serif text-white italic">I Miei Scatti 📷</h2>
@@ -95,7 +122,7 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
-          {SHOTS_GALLERY.map((url, index) => (
+          {images.map((url, index) => (
             <div 
               key={index} 
               className="group relative aspect-[4/5] overflow-hidden rounded-[30px] border border-white/10 shadow-2xl bg-white/5 animate-fade-in-up"
