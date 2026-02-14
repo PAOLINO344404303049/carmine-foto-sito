@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { type FC } from 'react';
-import { PORTFOLIO_BG_URL, CARMINE_PHOTO_URL } from '../constants';
+import { PORTFOLIO_BG_URL, CARMINE_PHOTO_URL, SHOTS_GALLERY } from '../constants';
 
 interface PortfolioProps {
   navigate: (page: string) => void;
@@ -9,7 +9,7 @@ interface PortfolioProps {
 
 const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-zinc-900 dark:bg-zinc-950 transition-colors">
+    <div className="relative min-h-screen flex flex-col items-center overflow-x-hidden bg-zinc-900 dark:bg-zinc-950 transition-colors">
       <div className="fixed inset-0 z-0">
         <img 
           src={PORTFOLIO_BG_URL} 
@@ -19,7 +19,8 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
         <div className="absolute inset-0 bg-black/80 backdrop-blur-[4px]"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-6xl px-4 py-20 md:py-32">
+      {/* Main Profile Section */}
+      <div className="relative z-10 w-full max-w-6xl px-4 pt-20 md:pt-32 pb-12">
         <div className="bg-white/5 backdrop-blur-xl rounded-[40px] md:rounded-[60px] border border-white/10 shadow-2xl overflow-hidden animate-fade-in-up">
           <div className="flex flex-col md:flex-row items-stretch">
             <div className="w-full md:w-5/12 lg:w-4/12 relative">
@@ -85,6 +86,31 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
           </div>
         </div>
       </div>
+
+      {/* New Section: I Miei Scatti 📷 */}
+      <section className="relative z-10 w-full max-w-7xl px-4 pb-24 md:pb-32">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-5xl font-serif text-white italic">I Miei Scatti 📷</h2>
+          <div className="w-16 h-1 bg-white/20 mx-auto mt-6"></div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+          {SHOTS_GALLERY.map((url, index) => (
+            <div 
+              key={index} 
+              className="group relative aspect-[4/5] overflow-hidden rounded-[30px] border border-white/10 shadow-2xl bg-white/5 animate-fade-in-up"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              <img 
+                src={url} 
+                alt={`Scatto ${index + 1}`} 
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale-[0.1] group-hover:grayscale-0"
+              />
+              <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors duration-500"></div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

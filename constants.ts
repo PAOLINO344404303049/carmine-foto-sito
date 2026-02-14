@@ -41,3 +41,17 @@ export const SERVICE_IMG_PRINT = "https://images.unsplash.com/photo-158159152442
 export const SERVICE_IMG_100 = "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&q=80";
 // Sostituita con l'immagine di Carmine come richiesto
 export const SERVICE_IMG_CONSULT = "https://i.imgur.com/7QWZ8j2.jpeg";
+
+// Gallery "I Miei Scatti"
+export const SHOTS_GALLERY = [
+  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1465495910483-0d6749ee9f4a?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1522673607200-1648482ce486?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1439539698758-ba2680ecadb9?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1510076857177-74700760beaa?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1525258946800-98cfd641d0de?auto=format&fit=crop&w=800&q=80"
+];
