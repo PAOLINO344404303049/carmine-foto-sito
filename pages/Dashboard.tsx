@@ -89,6 +89,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         userId: user.id,
         userName: user.name,
         userEmail: user.email,
+        phone: user.phone || '',
         packageId: selectedPackage.id,
         packageName: selectedPackage.name,
         photos: uploadedUrls,

@@ -129,7 +129,8 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
                 <div className="md:w-1/4">
                   <span className="text-[9px] font-bold text-gray-300 dark:text-zinc-600 uppercase block mb-1">ID Ordine: {order.id}</span>
                   <h3 className="font-bold text-xl text-black dark:text-white leading-tight mb-1 uppercase">{order.userName}</h3>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest">{order.userEmail}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest italic">Email: {order.userEmail}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest italic mt-1">Telefono: {order.phone}</p>
                 </div>
 
                 <div className="md:w-1/4 md:border-l md:border-gray-50 dark:md:border-zinc-800 md:pl-8">

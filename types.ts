@@ -24,6 +24,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   role: 'client' | 'admin';
   mustChangePassword?: boolean;
 }
@@ -48,6 +49,7 @@ export interface Order {
   userId: string;
   userName: string;
   userEmail: string;
+  phone: string;
   packageId: string;
   packageName: string;
   photos: PhotoFile[];

@@ -6,20 +6,25 @@ import { User } from '../types';
 interface AuthProps {
   mode: 'login' | 'register';
   navigate: (page: string) => void;
-  onLogin: (email: string, pass: string) => Promise<User>;
+  onLogin: (email: string, pass: string, phone?: string) => Promise<User>;
 }
 
 const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email && password) {
+      if (mode === 'register' && !phone) {
+        alert("Il numero di telefono è obbligatorio per la registrazione.");
+        return;
+      }
       setIsLoading(true);
       try {
-        await onLogin(email, password);
+        await onLogin(email, password, mode === 'register' ? phone : undefined);
         console.log("[AUTH] Autenticazione completata. Reindirizzamento alla galleria pacchetti.");
         navigate('packages');
       } catch (error: any) {
@@ -64,6 +69,23 @@ const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
               placeholder="email@esempio.it"
             />
           </div>
+          {mode === 'register' && (
+            <div>
+              <label htmlFor="phone" className="block text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+                Numero di telefono (necessario per avviso di consegna)
+              </label>
+              <input 
+                type="tel" 
+                id="phone"
+                name="phone"
+                required 
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-6 py-4 bg-gray-50 dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white transition-all"
+                placeholder="+39 333 1234567"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Password</label>
             <input 

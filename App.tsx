@@ -46,9 +46,9 @@ const App: React.FC = () => {
       case 'portfolio':
         return <Portfolio navigate={navigate} />;
       case 'login':
-        return <Auth mode="login" navigate={navigate} onLogin={store.login} />;
+        return <Auth mode="login" navigate={navigate} onLogin={(email, pass) => store.login(email, pass)} />;
       case 'register':
-        return <Auth mode="register" navigate={navigate} onLogin={store.signUp} />;
+        return <Auth mode="register" navigate={navigate} onLogin={(email, pass, phone) => store.signUp(email, pass, phone || '')} />;
       case 'dashboard':
         return store.user ? (
           <Dashboard 
@@ -59,7 +59,7 @@ const App: React.FC = () => {
             navigate={navigate}
             onLogout={handleLogout}
           />
-        ) : <Auth mode="login" navigate={navigate} onLogin={store.login} />;
+        ) : <Auth mode="login" navigate={navigate} onLogin={(email, pass) => store.login(email, pass)} />;
       case 'admin':
         return store.user?.role === 'admin' ? (
           <Admin 
@@ -68,7 +68,7 @@ const App: React.FC = () => {
             deleteOrder={store.deleteOrder}
             onLogout={handleLogout}
           />
-        ) : <Auth mode="login" navigate={navigate} onLogin={store.login} />;
+        ) : <Auth mode="login" navigate={navigate} onLogin={(email, pass) => store.login(email, pass)} />;
       case 'packages':
         return <Packages navigate={navigate} user={store.user} />;
       case 'contact':

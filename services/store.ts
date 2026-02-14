@@ -10,6 +10,7 @@ const ADMIN_EMAIL = "carminephotography0@gmail.com";
 interface SupabaseOrder {
   id: string;
   customer_email: string;
+  phone: string;
   photo_urls: string[];
   status: string;
   created_at: string;
@@ -56,6 +57,7 @@ export const useStore = () => {
           userId: '', 
           userName: item.customer_email.split('@')[0],
           userEmail: item.customer_email,
+          phone: item.phone || '',
           packageId: 'standard_100', 
           packageName: 'Pacchetto 100 Foto',
           photos: (item.photo_urls || []).map((url: string, index: number) => {
@@ -98,6 +100,7 @@ export const useStore = () => {
       id: authData.user.id,
       name: authData.user.email?.split('@')[0] || email.split('@')[0],
       email: email.toLowerCase(),
+      phone: authData.user.user_metadata?.phone || '',
       role: role as 'admin' | 'client',
       mustChangePassword: false
     };
@@ -107,10 +110,15 @@ export const useStore = () => {
     return loggedUser;
   };
 
-  const signUp = async (email: string, pass: string): Promise<User> => {
+  const signUp = async (email: string, pass: string, phone: string): Promise<User> => {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password: pass,
+      options: {
+        data: {
+          phone: phone
+        }
+      }
     });
 
     if (authError) {
@@ -122,6 +130,7 @@ export const useStore = () => {
       id: authData.user?.id || Math.random().toString(36).substr(2, 9),
       name: email.split('@')[0],
       email: email.toLowerCase(),
+      phone: phone,
       role: 'client',
       mustChangePassword: false
     };
@@ -139,9 +148,10 @@ export const useStore = () => {
   };
 
   const addOrder = async (order: Order) => {
-    // Sincronizzazione con il formato record previsto dai webhook: customer_email, photo_urls, status
+    // Sincronizzazione con il formato record previsto dai webhook: customer_email, photo_urls, status, phone
     const dbOrder = {
       customer_email: order.userEmail.toLowerCase(),
+      phone: order.phone,
       photo_urls: order.photos.map(p => p.url),
       status: OrderStatus.PENDING_PAYMENT, // Imposta automaticamente status = 'PENDING'
       created_at: new Date().toISOString()
