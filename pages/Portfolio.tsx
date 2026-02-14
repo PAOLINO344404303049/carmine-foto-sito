@@ -11,23 +11,23 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
   const [images, setImages] = useState<string[]>(SHOTS_GALLERY);
 
   useEffect(() => {
-    // Gestione dell'override delle immagini tramite URL e logging
+    // Gestione dell'override tramite URL parameters e LOG obbligatorio in console
     const params = new URLSearchParams(window.location.search);
     const updatedImages = [...SHOTS_GALLERY];
     let hasChanges = false;
 
-    // Logghiamo tutte le 12 immagini e verifichiamo se ci sono parametri nell'URL
+    // Log e controllo per le 12 foto
     for (let i = 1; i <= 12; i++) {
-      const overrideUrl = params.get(`photo${i}`);
-      const currentUrl = overrideUrl || SHOTS_GALLERY[i - 1];
+      const paramKey = `photo${i}`;
+      const overrideUrl = params.get(paramKey);
       
       if (overrideUrl) {
         updatedImages[i - 1] = overrideUrl;
         hasChanges = true;
       }
       
-      // Log richiesto: 📸 photoX: [link immagine]
-      console.log(`📸 photo${i}: ${currentUrl}`);
+      // Log richiesto per identificare le immagini
+      console.log(`📸 photo${i}: ${updatedImages[i - 1]}`);
     }
 
     if (hasChanges) {
@@ -46,7 +46,7 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
         <div className="absolute inset-0 bg-black/80 backdrop-blur-[4px]"></div>
       </div>
 
-      {/* Main Profile Section */}
+      {/* Sezione Profilo Personale */}
       <div className="relative z-10 w-full max-w-6xl px-4 pt-20 md:pt-32 pb-12">
         <div className="bg-white/5 backdrop-blur-xl rounded-[40px] md:rounded-[60px] border border-white/10 shadow-2xl overflow-hidden animate-fade-in-up">
           <div className="flex flex-col md:flex-row items-stretch">
@@ -73,7 +73,7 @@ const Portfolio: FC<PortfolioProps> = ({ navigate }) => {
                   Sono <strong className="text-white font-bold">Carmine Felice Napolitano</strong>, fotografo specializzato in matrimoni ed eventi, e da ben 12 anni mi immergo con passione e dedizione nel meraviglioso mondo della fotografia.
                 </p>
                 <p>
-                  Per me, la fotografia non è solo un lavoro, ma una vera e propria vocazione. Ogni scatto che catturo racconta una story, trasmette un'emozione e testimonia un momento prezioso nella vita delle persone che fotografo.
+                  Per me, la fotografia non è solo un lavoro, ma una vera e propria vocazione. Ogni scatto che catturo racconta una storia, trasmette un'emozione e testimonia un momento prezioso nella vita delle persone che fotografo.
                 </p>
                 <p>
                   La mia esperienza nel settore wedding ed eventi mi ha permesso di affinare le mie abilità nel catturare istanti unici e irripetibili, dando vita a immagini che narrano con autenticità e stile il vostro giorno speciale.
