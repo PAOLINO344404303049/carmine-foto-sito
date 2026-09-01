@@ -58,12 +58,22 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 .animate-fade-in {
   animation: fade-in 1s ease-out forwards;
 }
 
 .animate-fade-in-up {
   animation: fade-in-up 0.8s ease-out forwards;
+}
+
+.animate-slide {
+  /* 60s for 5 images is 12s per image, slow and elegant */
+  animation: slide 60s linear infinite;
 }
 
 /* Transition for theme switching */

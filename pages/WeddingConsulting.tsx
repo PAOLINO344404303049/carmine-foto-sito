@@ -1,14 +1,14 @@
-
 import * as React from 'react';
 import { type FC, useState } from 'react';
 import { STUDIO_ADDRESS, STUDIO_PHONE, STUDIO_EMAIL, INSTAGRAM_URL, WHATSAPP_LINK } from '../constants';
 
-const Contact: FC = () => {
+const WeddingConsulting: FC = () => {
   const [formData, setFormData] = useState({
-    name: '',
+    names: '',
     email: '',
     phone: '',
-    eventType: '',
+    date: '',
+    location: '',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,8 +22,8 @@ const Contact: FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
-      setError('Compila i campi obbligatori (Nome, Email, Messaggio).');
+    if (!formData.names || !formData.email || !formData.message) {
+      setError('Compila i campi obbligatori (Nomi, Email, Messaggio).');
       return;
     }
     
@@ -31,7 +31,7 @@ const Contact: FC = () => {
     setError('');
     
     try {
-      const response = await fetch('/api/contact', {
+      const response = await fetch('/api/wedding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -44,7 +44,7 @@ const Contact: FC = () => {
       }
 
       setIsSuccess(true);
-      setFormData({ name: '', email: '', phone: '', eventType: '', message: '' });
+      setFormData({ names: '', email: '', phone: '', date: '', location: '', message: '' });
       setTimeout(() => setIsSuccess(false), 5000);
     } catch (err) {
       setError('Si è verificato un errore durante l\'invio. Riprova più tardi.');
@@ -58,10 +58,10 @@ const Contact: FC = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20">
         <div className="space-y-12">
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 block mb-4">Contatti</span>
-            <h1 className="text-4xl md:text-5xl font-serif mb-8 dark:text-white">Passa a trovarci in studio.</h1>
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 block mb-4">Consulenza Wedding</span>
+            <h1 className="text-4xl md:text-5xl font-serif mb-8 dark:text-white">Raccontaci il tuo sogno.</h1>
             <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-md">
-              Il nostro studio è aperto dal Lunedì al Sabato. Ti aspettiamo per il ritiro dei tuoi ricordi o per pianificare il tuo prossimo servizio fotografico.
+              Ogni matrimonio è unico, proprio come voi. Scrivici o fissa un appuntamento in studio per progettare insieme il reportage perfetto per il vostro grande giorno.
             </p>
           </div>
 
@@ -73,7 +73,7 @@ const Contact: FC = () => {
                 </svg>
               </div>
               <div>
-                <h4 className="font-bold text-lg mb-1 dark:text-white">Indirizzo</h4>
+                <h4 className="font-bold text-lg mb-1 dark:text-white">Fissa un appuntamento in Studio</h4>
                 <p className="text-gray-500 dark:text-gray-400 text-sm">{STUDIO_ADDRESS}</p>
               </div>
             </div>
@@ -85,8 +85,8 @@ const Contact: FC = () => {
                 </svg>
               </div>
               <div>
-                <h4 className="font-bold text-lg mb-1 dark:text-white">WhatsApp Diretto</h4>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">{STUDIO_PHONE} (Click per chattare)</p>
+                <h4 className="font-bold text-lg mb-1 dark:text-white">Scrivici su WhatsApp</h4>
+                <p className="text-gray-500 dark:text-gray-400 text-sm">{STUDIO_PHONE} (Risposta rapida)</p>
               </div>
             </a>
 
@@ -105,11 +105,11 @@ const Contact: FC = () => {
         </div>
 
         <div className="bg-gray-50 dark:bg-zinc-900 p-10 md:p-16 rounded-[60px] shadow-sm border border-gray-100 dark:border-zinc-800">
-          <h3 className="text-2xl font-serif mb-8 dark:text-white italic">Inviaci un messaggio rapido</h3>
+          <h3 className="text-2xl font-serif mb-8 dark:text-white italic">Richiedi un Preventivo</h3>
           
           {isSuccess && (
             <div className="mb-6 p-4 bg-green-50 text-green-800 rounded-2xl border border-green-200">
-              Messaggio inviato con successo! Ti risponderemo al più presto.
+              Richiesta inviata con successo! Ti risponderemo al più presto.
             </div>
           )}
           {error && (
@@ -121,8 +121,8 @@ const Contact: FC = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Nome*</label>
-                <input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="Mario" />
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Nome degli sposi*</label>
+                <input type="text" name="names" value={formData.names} onChange={handleChange} required className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="Mario e Giulia" />
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Email*</label>
@@ -135,16 +135,20 @@ const Contact: FC = () => {
                 <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="+39 333 1234567" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Tipo di Evento</label>
-                <input type="text" name="eventType" value={formData.eventType} onChange={handleChange} className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="Es: Battesimo, Laurea..." />
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Data del Matrimonio (se stabilita)</label>
+                <input type="text" name="date" value={formData.date} onChange={handleChange} className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="Es: 15 Giugno 2026" />
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Messaggio*</label>
-              <textarea rows={4} name="message" value={formData.message} onChange={handleChange} required className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="Ciao Carmine, vorrei info su..."></textarea>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Luogo del Matrimonio</label>
+              <input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="Città, Chiesa o Location" />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Raccontaci il tuo evento*</label>
+              <textarea rows={4} name="message" value={formData.message} onChange={handleChange} required className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="Ciao Carmine, ci sposeremo a Napoli e vorremmo maggiori informazioni sui tuoi servizi fotografici..."></textarea>
             </div>
             <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-200 shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50">
-              {isSubmitting ? 'Invio in corso...' : 'Invia Email'}
+              {isSubmitting ? 'Invio in corso...' : 'Invia Richiesta'}
             </button>
           </form>
         </div>
@@ -153,4 +157,4 @@ const Contact: FC = () => {
   );
 };
 
-export default Contact;
+export default WeddingConsulting;

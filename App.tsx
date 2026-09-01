@@ -7,6 +7,7 @@ import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
 import Contact from './pages/Contact';
+import WeddingConsulting from './pages/WeddingConsulting';
 import Packages from './pages/Packages';
 import Portfolio from './pages/Portfolio';
 import Privacy from './pages/Privacy';
@@ -73,6 +74,8 @@ const App: React.FC = () => {
         return <Packages navigate={navigate} user={store.user} />;
       case 'contact':
         return <Contact />;
+      case 'wedding-consulting':
+        return <WeddingConsulting />;
       case 'privacy':
         return <Privacy />;
       case 'cookie':

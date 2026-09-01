@@ -45,6 +45,69 @@ export const EmailService = {
   },
 
   /**
+   * Invia email per il modulo contatti
+   */
+  sendContactMessage: async (data: any) => {
+    console.log(`[EMAIL] Nuovo messaggio contatti da: ${data.name}`);
+    
+    const template = `
+      Nuovo messaggio dal sito (Sezione Contatti)
+      
+      Dettagli Mittente:
+      - Nome: ${data.name}
+      - Email: ${data.email}
+      - Telefono: ${data.phone || 'Non specificato'}
+      - Tipo Evento: ${data.eventType || 'Non specificato'}
+      
+      Messaggio:
+      ${data.message}
+      
+      Data invio: ${new Date().toLocaleString('it-IT')}
+    `;
+
+    // Simulazione chiamata API
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log("%c EMAIL INVIATA (CONTATTI) ", "background: #3b82f6; color: #fff; font-weight: bold;");
+        console.log(template);
+        resolve({ success: true });
+      }, 1000);
+    });
+  },
+
+  /**
+   * Invia email per il modulo consulenza wedding
+   */
+  sendWeddingConsulting: async (data: any) => {
+    console.log(`[EMAIL] Nuova richiesta Wedding da: ${data.names}`);
+    
+    const template = `
+      Nuova richiesta di CONSULENZA WEDDING dal sito
+      
+      Dettagli Sposi:
+      - Nome e cognome: ${data.names}
+      - Email: ${data.email}
+      - Telefono: ${data.phone || 'Non specificato'}
+      - Data del matrimonio: ${data.date || 'Non specificata'}
+      - Location: ${data.location || 'Non specificata'}
+      
+      Racconto dell'evento:
+      ${data.message}
+      
+      Data richiesta: ${new Date().toLocaleString('it-IT')}
+    `;
+
+    // Simulazione chiamata API
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log("%c EMAIL INVIATA (WEDDING) ", "background: #ec4899; color: #fff; font-weight: bold;");
+        console.log(template);
+        resolve({ success: true });
+      }, 1000);
+    });
+  },
+
+  /**
    * Invia email di notifica "Pronto per il ritiro"
    */
   sendCollectionReady: async (order: Order) => {
