@@ -37,17 +37,17 @@ const Contact: FC = () => {
         body: JSON.stringify(formData)
       });
       
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Errore dal server');
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Si è verificato un errore durante l\'invio. Riprova più tardi.');
       }
 
       setIsSuccess(true);
       setFormData({ name: '', email: '', phone: '', eventType: '', message: '' });
       setTimeout(() => setIsSuccess(false), 5000);
-    } catch (err) {
-      setError('Si è verificato un errore durante l\'invio. Riprova più tardi.');
+    } catch (err: any) {
+      setError(err?.message || 'Si è verificato un errore durante l\'invio. Riprova più tardi.');
     } finally {
       setIsSubmitting(false);
     }
