@@ -12,6 +12,7 @@ import Packages from './pages/Packages';
 import Portfolio from './pages/Portfolio';
 import Privacy from './pages/Privacy';
 import Cookie from './pages/Cookie';
+import CookieConsent from './components/CookieConsent';
 import { useStore } from './services/store';
 import { WHATSAPP_LINK } from './constants';
 
@@ -95,6 +96,9 @@ const App: React.FC = () => {
         {renderPage()}
       </Layout>
       
+      {/* Cookie Consent Banner & Preferences Modal */}
+      <CookieConsent onNavigate={navigate} />
+
       {/* Floating WhatsApp Button */}
       <a 
         href={WHATSAPP_LINK}

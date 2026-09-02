@@ -65,9 +65,9 @@ const Home: FC<HomeProps> = ({ navigate }) => {
             <img 
               src={LOGO_URL} 
               alt="Carmine Felice Napolitano Logo" 
-              className="h-24 md:h-60 w-auto brightness-0 invert object-contain mx-auto"
+              className="h-40 sm:h-52 md:h-60 w-auto max-w-[90vw] brightness-0 invert object-contain mx-auto"
             />
-            <h2 className="mt-6 md:mt-10 text-white/95 font-serif text-[0.65rem] sm:text-sm md:text-xl lg:text-2xl tracking-[0.25em] md:tracking-[0.3em] uppercase font-light text-center">
+            <h2 className="mt-6 md:mt-10 text-white/95 font-serif text-sm sm:text-base md:text-xl lg:text-2xl tracking-[0.18em] sm:tracking-[0.25em] md:tracking-[0.3em] uppercase font-light text-center leading-relaxed max-w-xl">
               Non fotografo momenti. Racconto emozioni.
             </h2>
           </div>
