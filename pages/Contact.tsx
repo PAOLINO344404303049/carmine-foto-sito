@@ -144,7 +144,7 @@ const Contact: FC = () => {
               <textarea rows={4} name="message" value={formData.message} onChange={handleChange} required className="w-full px-6 py-4 bg-white dark:bg-zinc-800 dark:text-white border border-gray-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white shadow-sm transition-all" placeholder="Ciao Carmine, vorrei info su..."></textarea>
             </div>
             <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-200 shadow-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-50">
-              {isSubmitting ? 'Invio in corso...' : 'Invia Email'}
+              {isSubmitting ? 'Invio in corso...' : 'Invia Richiesta'}
             </button>
           </form>
         </div>

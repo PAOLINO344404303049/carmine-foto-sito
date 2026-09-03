@@ -50,10 +50,11 @@ const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
             />
           </div>
 
-          <div className="hidden lg:flex items-center space-x-10 text-[13px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+          <div className="hidden lg:flex items-center space-x-8 xl:space-x-10 text-[12px] xl:text-[13px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
             <button onClick={() => handleNav('home')} className="hover:text-black dark:hover:text-white transition-colors">Home</button>
             <button onClick={() => handleNav('portfolio')} className="hover:text-black dark:hover:text-white transition-colors">Portfolio</button>
             <button onClick={() => handleNav('packages')} className="hover:text-black dark:hover:text-white transition-colors">Pacchetti</button>
+            <button onClick={() => handleNav('custom-products')} className="hover:text-amber-500 dark:hover:text-amber-400 text-amber-600/90 dark:text-amber-400/90 transition-colors">Prodotti Personalizzati</button>
             <button onClick={() => handleNav('contact')} className="hover:text-black dark:hover:text-white transition-colors">Contatti</button>
           </div>
 
@@ -145,6 +146,13 @@ const Layout: FC<LayoutProps> = ({ children, user, onLogout, navigate }) => {
             >
               <span className="tracking-wide">Pacchetti</span>
               <span className="text-zinc-400 font-sans text-lg font-light">→</span>
+            </button>
+            <button 
+              onClick={() => handleNav('custom-products')} 
+              className="w-full px-5 py-4 bg-amber-950/20 hover:bg-amber-950/40 border border-amber-500/30 rounded-2xl text-xl font-serif italic text-amber-200 flex justify-between items-center active:scale-[0.99] transition-all shadow-sm"
+            >
+              <span className="tracking-wide">Prodotti Personalizzati</span>
+              <span className="text-amber-400 font-sans text-lg font-light">→</span>
             </button>
             <button 
               onClick={() => handleNav('contact')} 

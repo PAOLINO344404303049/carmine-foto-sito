@@ -272,24 +272,50 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
           </div>
 
           <div className="bg-white dark:bg-zinc-900 p-8 md:p-10 rounded-[40px] shadow-sm border border-gray-100 dark:border-zinc-800">
-            <h2 className="text-lg font-serif mb-8 text-black dark:text-white border-b border-gray-50 dark:border-zinc-800 pb-5 italic">I tuoi Ordini</h2>
+            <div className="flex justify-between items-center mb-6 border-b border-gray-50 dark:border-zinc-800 pb-4">
+              <h2 className="text-lg font-serif text-black dark:text-white italic">I tuoi Ordini</h2>
+              <button 
+                onClick={() => navigate('custom-products')}
+                className="text-[9px] font-bold uppercase tracking-widest text-amber-500 hover:underline"
+              >
+                + Prodotti
+              </button>
+            </div>
             {orders.length === 0 ? (
               <p className="text-gray-400 dark:text-gray-500 text-[9px] font-bold uppercase tracking-widest text-center py-10 italic">Ancora nessun ordine.</p>
             ) : (
               <div className="space-y-4">
-                {orders.map(order => (
-                  <div key={order.id} className="p-5 border border-gray-100 dark:border-zinc-800 rounded-2xl bg-gray-50 dark:bg-zinc-800/50">
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-[8px] font-bold text-gray-300 dark:text-zinc-600 uppercase tracking-widest">ID: {order.id.slice(0, 8)}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase border ${currentStatusColor(order.status)}`}>
-                        {OrderStatusLabels[order.status] || order.status}
-                      </span>
+                {orders.map(order => {
+                  const isCustom = order.orderType === 'custom_product' || (order.packageName && (order.packageName.includes('T-Shirt') || order.packageName.includes('Cover') || order.packageName.includes('Portachiavi') || order.packageName.includes('Collana') || order.packageName.includes('Cuscino')));
+                  const firstPhoto = order.photos && order.photos.length > 0 ? order.photos[0] : null;
+
+                  return (
+                    <div key={order.id} className="p-5 border border-gray-100 dark:border-zinc-800 rounded-2xl bg-gray-50 dark:bg-zinc-800/50">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="text-[8px] font-bold text-gray-300 dark:text-zinc-600 uppercase tracking-widest">ID: {order.id.slice(0, 10)}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold uppercase border ${currentStatusColor(order.status)}`}>
+                          {OrderStatusLabels[order.status] || order.status}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 mb-2">
+                        {firstPhoto && (
+                          <img src={firstPhoto.url} alt="Foto" className="w-10 h-10 object-cover rounded-lg border border-gray-200 dark:border-zinc-700" />
+                        )}
+                        <div>
+                          <p className="font-bold text-xs text-gray-900 dark:text-white italic">{order.packageName}</p>
+                          {isCustom && order.size && <span className="text-[9px] text-amber-500 font-bold mr-2">Taglia: {order.size}</span>}
+                          {isCustom && order.deviceModel && <span className="text-[9px] text-amber-500 font-bold mr-2">Modello: {order.deviceModel}</span>}
+                        </div>
+                      </div>
+
+                      <p className="text-[8px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-widest">
+                        {order.quantity ? `Qtà: ${order.quantity} • ` : ''} Totale: €{(order.total || 0).toFixed(2)}
+                      </p>
+                      <p className="text-[7px] text-gray-300 dark:text-zinc-600 mt-2">{new Date(order.createdAt).toLocaleDateString()}</p>
                     </div>
-                    <p className="font-bold text-xs text-gray-900 dark:text-white mb-1 italic">{order.packageName}</p>
-                    <p className="text-[8px] text-gray-400 dark:text-gray-500 uppercase font-bold tracking-widest">{order.photos.length} Foto &bull; €{order.total}</p>
-                    <p className="text-[7px] text-gray-300 dark:text-zinc-600 mt-2">{new Date(order.createdAt).toLocaleDateString()}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

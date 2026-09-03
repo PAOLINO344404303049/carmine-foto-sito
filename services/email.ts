@@ -136,5 +136,51 @@ export const EmailService = {
         resolve({ success: true });
       }, 1000);
     });
+  },
+
+  /**
+   * Invia notifica ordine prodotto personalizzato a Carmine Felice Napolitano
+   */
+  sendCustomProductOrder: async (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    productName: string;
+    size?: string;
+    deviceModel?: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    photoUrl?: string;
+    photoUrls?: string[];
+    orderId?: string;
+    paymentStatus?: string;
+    paymentChoice?: string;
+    paymentOption?: string;
+    paymentMethod?: string;
+  }) => {
+    console.log(`[EMAIL] Invio notifica Ordine Personalizzato via /api/custom-order per ${data.productName}`);
+    try {
+      const response = await fetch('/api/custom-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('[EMAIL] Avviso invio email ordine personalizzato:', errorData.error || response.statusText);
+        return { success: false, error: errorData.error || 'Errore durante l\'invio dell\'email' };
+      }
+
+      const result = await response.json();
+      return { success: true, result };
+    } catch (err: any) {
+      console.warn('[EMAIL] Eccezione invio email ordine personalizzato:', err.message);
+      return { success: false, error: err.message };
+    }
   }
 };

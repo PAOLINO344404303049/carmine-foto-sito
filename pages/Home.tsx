@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { type FC } from 'react';
-import { WHATSAPP_LINK, SERVICE_IMG_PRINT, SERVICE_IMG_100, SERVICE_IMG_CONSULT, INSTAGRAM_URL, LOGO_URL } from '../constants';
+import { WHATSAPP_LINK, SERVICE_IMG_PRINT, SERVICE_IMG_100, SERVICE_IMG_CONSULT, INSTAGRAM_URL, LOGO_URL, customTshirtMockup, getCustomProductImage } from '../constants';
 
 // ARRAY DELLE IMMAGINI DELLA GALLERIA (MODIFICA QUI I LINK PER CAMBIARE LE FOTO DELLO SFONDO)
 const heroGallery = [
@@ -105,7 +105,7 @@ const Home: FC<HomeProps> = ({ navigate }) => {
             <h2 className="text-3xl md:text-5xl font-serif mb-4 text-black dark:text-white italic">I Nostri Servizi</h2>
             <div className="w-20 h-1 bg-black dark:bg-white mx-auto"></div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="group cursor-pointer" onClick={() => navigate('wedding-consulting')}>
               <div className="relative overflow-hidden rounded-[40px] aspect-[4/5] mb-6 shadow-xl">
                 <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800" alt="Consulenza Wedding" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
@@ -132,6 +132,25 @@ const Home: FC<HomeProps> = ({ navigate }) => {
               <h3 className="text-2xl font-serif mb-3 dark:text-white italic">Consulenza per tutti i tuoi eventi</h3>
               <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4 italic">Battesimi, comunioni, 18 anni, lauree o feste private. Progettiamo insieme il servizio fotografico perfetto per ogni tua occasione speciale.</p>
               <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-black dark:border-white dark:text-white pb-1 group-hover:pr-4 transition-all italic">Contattaci →</span>
+            </div>
+            <div className="group cursor-pointer" onClick={() => navigate('custom-products')}>
+              <div className="relative overflow-hidden rounded-[40px] aspect-[4/5] mb-6 shadow-xl bg-zinc-900">
+                <img 
+                  src={getCustomProductImage('t-shirt-custom') || customTshirtMockup} 
+                  alt="Prodotti Personalizzati" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = customTshirtMockup;
+                  }}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                />
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors"></div>
+                <div className="absolute top-4 right-4 bg-amber-400 text-black px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md">
+                  Novità
+                </div>
+              </div>
+              <h3 className="text-2xl font-serif mb-3 dark:text-white italic">Prodotti Personalizzati</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-4 italic">T-Shirt, Tazze, Cover, Collane, Portachiavi e Cuscini con la tua foto stampata ad altissima definizione.</p>
+              <span className="text-xs font-bold uppercase tracking-widest border-b-2 border-amber-500 text-amber-600 dark:text-amber-400 pb-1 group-hover:pr-4 transition-all italic">Personalizza Ora →</span>
             </div>
           </div>
         </div>

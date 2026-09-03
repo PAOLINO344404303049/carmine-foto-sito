@@ -44,6 +44,18 @@ export interface PhotoFile {
   size: number;
 }
 
+export interface CustomProduct {
+  id: string;
+  name: string;
+  shortDescription: string;
+  price: number;
+  image: string;
+  category: 't-shirt' | 'keychain' | 'necklace' | 'pillow' | 'phone_case' | 'mug';
+  sizes?: string[]; // Per t-shirt: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+  requiresDeviceModel?: boolean; // Per cover smartphone
+  maxPhotos?: number; // Per tazza: fino a 3 foto
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -57,4 +69,14 @@ export interface Order {
   paymentMethod: PaymentMethod;
   createdAt: string;
   total: number;
+  // Campi opzionali specifici per Prodotti Personalizzati
+  orderType?: 'photo_package' | 'custom_product';
+  productId?: string;
+  size?: string;
+  deviceModel?: string;
+  quantity?: number;
+  unitPrice?: number;
+  customerLastName?: string;
+  customPaymentMethod?: 'pickup_pay_in_store' | 'pickup_pay_now';
+  paymentChoice?: string;
 }

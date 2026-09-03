@@ -1,5 +1,28 @@
 
-import { PhotoPackage } from './types';
+import { PhotoPackage, CustomProduct } from './types';
+import { 
+  customTshirtMockup, 
+  customMugProduct, 
+  DEFAULT_PRODUCT_IMAGE_LINKS,
+  getCustomProductImage,
+  getAllCustomProductImages,
+  saveCustomProductImageLinks,
+  resetCustomProductImageLinks,
+  formatImageUrl,
+  PRODUCT_NAMES
+} from './src/productImages';
+
+export { 
+  customTshirtMockup, 
+  customMugProduct, 
+  DEFAULT_PRODUCT_IMAGE_LINKS as CUSTOM_PRODUCT_IMAGE_LINKS,
+  getCustomProductImage,
+  getAllCustomProductImages,
+  saveCustomProductImageLinks,
+  resetCustomProductImageLinks,
+  formatImageUrl,
+  PRODUCT_NAMES
+};
 
 export const PRINT_PACKAGES: PhotoPackage[] = [
   {
@@ -11,6 +34,70 @@ export const PRINT_PACKAGES: PhotoPackage[] = [
   }
 ];
 
+/**
+ * Generatore dei prodotti personalizzati con immagini dinamiche aggiornabili via link
+ */
+export const getCustomProducts = (): CustomProduct[] => [
+  {
+    id: 't-shirt-custom',
+    name: 'T-Shirt Personalizzata',
+    shortDescription: 'T-shirt in 100% cotone morbido con stampa fotografica ad altissima definizione. Disponibile in diverse taglie.',
+    price: 10,
+    image: getCustomProductImage('t-shirt-custom'),
+    category: 't-shirt',
+    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
+    requiresDeviceModel: false
+  },
+  {
+    id: 'mug-custom',
+    name: 'Tazza Personalizzata',
+    shortDescription: 'Tazza in ceramica bianca con stampa fotografica panoramica. Puoi selezionare da 1 a 3 foto.',
+    price: 10,
+    image: getCustomProductImage('mug-custom'),
+    category: 'mug',
+    maxPhotos: 3,
+    requiresDeviceModel: false
+  },
+  {
+    id: 'keychain-custom',
+    name: 'Portachiavi Personalizzato',
+    shortDescription: 'Elegante portachiavi fotografico double-face per portare sempre con te i tuoi ricordi più cari.',
+    price: 10,
+    image: getCustomProductImage('keychain-custom'),
+    category: 'keychain',
+    requiresDeviceModel: false
+  },
+  {
+    id: 'necklace-custom',
+    name: 'Collana Personalizzata',
+    shortDescription: 'Ciondolo raffinato con inserto fotografico smaltato e catenina in acciaio inossidabile.',
+    price: 10,
+    image: getCustomProductImage('necklace-custom'),
+    category: 'necklace',
+    requiresDeviceModel: false
+  },
+  {
+    id: 'pillow-custom',
+    name: 'Cuscino Personalizzato',
+    shortDescription: 'Morbido cuscino d\'arredo 30x30 cm con tessuto anallergico e stampa fotografica ultra brillante.',
+    price: 10,
+    image: getCustomProductImage('pillow-custom'),
+    category: 'pillow',
+    requiresDeviceModel: false
+  },
+  {
+    id: 'phone-case-custom',
+    name: 'Cover Personalizzata',
+    shortDescription: 'Custodia protettiva anti-urto su misura per il tuo smartphone con la tua fotografia preferita.',
+    price: 10,
+    image: getCustomProductImage('phone-case-custom'),
+    category: 'phone_case',
+    requiresDeviceModel: true
+  }
+];
+
+export const CUSTOM_PRODUCTS: CustomProduct[] = getCustomProducts();
+
 export const APP_NAME = "Carmine Felice Napolitano";
 export const APP_SUBTITLE = "Fotografo";
 export const STUDIO_ADDRESS = "Via Roma 70, Mugnano del Cardinal (AV)";
@@ -19,6 +106,7 @@ export const STUDIO_EMAIL = "carminephotography0@gmail.com";
 export const INSTAGRAM_USER = "@carmine_photograpy";
 export const INSTAGRAM_URL = "https://www.instagram.com/carmine_photograpy/";
 export const SUMUP_PAY_LINK = "https://pay.sumup.com/b2c/XS2N1R43GQ";
+export const SUMUP_CUSTOM_PRODUCTS_URL = "https://pay.sumup.com/b2c/Q6R1I849"; // Link SumUp da 10 € per prodotti personalizzati
 export const WHATSAPP_LINK = `https://wa.me/393409523725`;
 
 /**

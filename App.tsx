@@ -10,6 +10,7 @@ import Contact from './pages/Contact';
 import WeddingConsulting from './pages/WeddingConsulting';
 import Packages from './pages/Packages';
 import Portfolio from './pages/Portfolio';
+import CustomProducts from './pages/CustomProducts';
 import Privacy from './pages/Privacy';
 import Cookie from './pages/Cookie';
 import CookieConsent from './components/CookieConsent';
@@ -73,6 +74,9 @@ const App: React.FC = () => {
         ) : <Auth mode="login" navigate={navigate} onLogin={(email, pass) => store.login(email, pass)} />;
       case 'packages':
         return <Packages navigate={navigate} user={store.user} />;
+      case 'custom-products':
+      case 'prodotti-personalizzati':
+        return <CustomProducts navigate={navigate} user={store.user} addOrder={store.addOrder} />;
       case 'contact':
         return <Contact />;
       case 'wedding-consulting':
