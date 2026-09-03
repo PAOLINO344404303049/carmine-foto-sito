@@ -19,6 +19,75 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // Gestione centralizzata immagini prodotti personalizzati (Persistenza cloud Supabase)
+  const APP_CONFIG_BUCKET = "app_config";
+  const PRODUCT_IMAGES_FILE = "product-images.json";
+
+  const getSupabaseServerClient = () => {
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://thiyeerwwhwarekudhyg.supabase.co';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
+    return createClient(supabaseUrl, supabaseKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+  };
+
+  app.get("/api/product-images", async (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    try {
+      const supabase = getSupabaseServerClient();
+      const { data, error } = await supabase.storage.from(APP_CONFIG_BUCKET).download(PRODUCT_IMAGES_FILE);
+      if (error || !data) {
+        res.json({ success: true, links: {}, source: "defaults" });
+        return;
+      }
+      const text = await data.text();
+      const parsed = JSON.parse(text);
+      res.json({ success: true, links: parsed, source: "supabase" });
+    } catch (err: any) {
+      console.error("[SERVER] Errore GET /api/product-images:", err?.message || err);
+      res.json({ success: true, links: {}, error: err?.message });
+    }
+  });
+
+  app.post("/api/product-images", async (req, res) => {
+    try {
+      const links = req.body?.links;
+      if (!links || typeof links !== "object") {
+        res.status(400).json({ error: "Il campo 'links' deve essere un oggetto valido" });
+        return;
+      }
+      const supabase = getSupabaseServerClient();
+      try {
+        await supabase.storage.createBucket(APP_CONFIG_BUCKET, { public: true });
+      } catch {
+        // Ignora se il bucket esiste già
+      }
+
+      const payloadToSave = {
+        ...links,
+        updated_at: new Date().toISOString()
+      };
+      const buffer = Buffer.from(JSON.stringify(payloadToSave, null, 2));
+      const { data, error } = await supabase.storage.from(APP_CONFIG_BUCKET).upload(PRODUCT_IMAGES_FILE, buffer, {
+        contentType: "application/json",
+        upsert: true
+      });
+
+      if (error) {
+        console.error("[SERVER] Errore salvataggio Supabase:", error.message);
+        res.status(500).json({ error: error.message });
+        return;
+      }
+      console.log("[SERVER] Link foto prodotti aggiornati con successo nel cloud Supabase:", data);
+      res.json({ success: true, links: payloadToSave, updatedAt: payloadToSave.updated_at });
+    } catch (err: any) {
+      console.error("[SERVER] Eccezione POST /api/product-images:", err?.message || err);
+      res.status(500).json({ error: "Errore interno durante il salvataggio" });
+    }
+  });
+
   // API routes FIRST
   app.post("/api/contact", async (req, res) => {
     console.log("[CONTATTI] Richiesta ricevuta su server Express");

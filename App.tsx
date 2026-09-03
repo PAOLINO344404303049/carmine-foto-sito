@@ -15,13 +15,16 @@ import Privacy from './pages/Privacy';
 import Cookie from './pages/Cookie';
 import CookieConsent from './components/CookieConsent';
 import { useStore } from './services/store';
-import { WHATSAPP_LINK } from './constants';
+import { WHATSAPP_LINK, fetchCustomProductImageLinks } from './constants';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const store = useStore();
 
   useEffect(() => {
+    // Pre-carica le immagini dei prodotti salvate nel Cloud Supabase
+    fetchCustomProductImageLinks().catch(() => {});
+
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
       if (hash) setCurrentPage(hash);

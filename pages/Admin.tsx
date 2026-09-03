@@ -7,6 +7,7 @@ import {
   getAllCustomProductImages, 
   saveCustomProductImageLinks, 
   resetCustomProductImageLinks,
+  fetchCustomProductImageLinks,
   formatImageUrl,
   PRODUCT_NAMES 
 } from '../constants';
@@ -29,26 +30,85 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
 
-  // Modal per gestione link foto prodotti personalizzati
+  // Modal per gestione link foto prodotti personalizzati (Sincronizzazione Cloud Supabase)
   const [showImagesModal, setShowImagesModal] = useState<boolean>(false);
   const [productLinks, setProductLinks] = useState<Record<string, string>>(() => getAllCustomProductImages());
+  const [isSavingImages, setIsSavingImages] = useState<boolean>(false);
+  const [uploadingProdId, setUploadingProdId] = useState<string | null>(null);
 
-  const openImagesModal = () => {
+  const openImagesModal = async () => {
     setProductLinks(getAllCustomProductImages());
     setShowImagesModal(true);
+    try {
+      const fresh = await fetchCustomProductImageLinks(true);
+      if (fresh) {
+        setProductLinks(getAllCustomProductImages());
+      }
+    } catch {}
   };
 
-  const handleSaveProductLinks = (e: React.FormEvent) => {
+  const handleSaveProductLinks = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveCustomProductImageLinks(productLinks);
-    showToast('success', 'Link delle foto aggiornati con successo!');
-    setShowImagesModal(false);
+    setIsSavingImages(true);
+    try {
+      const res = await saveCustomProductImageLinks(productLinks);
+      if (res.success) {
+        showToast('success', 'Foto dei prodotti salvate e sincronizzate nel Cloud con successo! Visibili ora anche su Vercel.');
+        setShowImagesModal(false);
+      } else {
+        showToast('error', `Errore durante il salvataggio nel Cloud: ${res.error || 'Riprova'}`);
+      }
+    } catch (err: any) {
+      showToast('error', `Errore imprevisto: ${err?.message || err}`);
+    } finally {
+      setIsSavingImages(false);
+    }
   };
 
-  const handleResetProductLinks = () => {
-    resetCustomProductImageLinks();
-    setProductLinks(getAllCustomProductImages());
-    showToast('info', 'Link ripristinati alle foto predefinite.');
+  const handleResetProductLinks = async () => {
+    setIsSavingImages(true);
+    try {
+      const res = await resetCustomProductImageLinks();
+      if (res.success) {
+        setProductLinks(getAllCustomProductImages());
+        showToast('info', 'Foto dei prodotti ripristinate ai valori predefiniti nel Cloud.');
+      } else {
+        showToast('error', `Errore durante il ripristino: ${res.error || 'Riprova'}`);
+      }
+    } catch (err: any) {
+      showToast('error', `Errore imprevisto: ${err?.message || err}`);
+    } finally {
+      setIsSavingImages(false);
+    }
+  };
+
+  const handleUploadImageFile = async (prodId: string, file: File) => {
+    setUploadingProdId(prodId);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", "fotocs");
+
+      const response = await fetch("https://api.cloudinary.com/v1_1/divyx0t5b/image/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Errore durante il caricamento della foto su Cloudinary.");
+      }
+
+      setProductLinks(prev => ({
+        ...prev,
+        [prodId]: data.secure_url
+      }));
+      showToast('success', `Foto caricata con successo! Clicca "Salva Modifiche" per confermare nel Cloud.`);
+    } catch (err: any) {
+      showToast('error', `Errore caricamento foto: ${err?.message || 'Riprova'}`);
+    } finally {
+      setUploadingProdId(null);
+    }
   };
 
   // Stato e toggle del tema (Chiaro / Scuro)
@@ -857,9 +917,13 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
             </div>
 
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3.5 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-              💡 <strong>Supporto Link Universale:</strong> Puoi incollare qualsiasi link immagine (es. <em>Cloudinary, Imgur, Postimages, Unsplash</em>) oppure link di condivisione di <strong>Google Drive</strong> o <strong>Dropbox</strong>: vengono formattati automaticamente in link diretti!
+              <div className="flex items-center gap-2 mb-1.5 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>Persistenza Cloud Supabase Attiva</span>
+              </div>
+              💡 Le immagini salvate qui vengono registrate su <strong>Supabase Cloud</strong> e saranno visibili automaticamente a tutti i visitatori, sia in anteprima che sul sito pubblicato su <strong>Vercel</strong>.
               <br />
-              <span className="opacity-80 mt-1 block">In alternativa, puoi anche modificare direttamente il file <code className="bg-amber-500/20 px-1 py-0.5 rounded font-mono">src/productImages.ts</code>.</span>
+              <span className="opacity-90 mt-1 block">Puoi <strong>incollare un link</strong> (Cloudinary, Google Drive, Unsplash, ecc.) oppure cliccare su <strong>"Scegli Foto"</strong> per caricarla direttamente dal tuo dispositivo!</span>
             </div>
 
             <form onSubmit={handleSaveProductLinks} className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
@@ -867,13 +931,14 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
                 const name = PRODUCT_NAMES[prodId];
                 const currentLink = productLinks[prodId] || '';
                 const formatted = formatImageUrl(currentLink);
+                const isUploadingThis = uploadingProdId === prodId;
 
                 return (
                   <div 
                     key={prodId} 
                     className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50 flex flex-col sm:flex-row items-start sm:items-center gap-4"
                   >
-                    <div className="w-16 h-16 rounded-xl border border-zinc-300 dark:border-zinc-700 overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0">
+                    <div className="w-16 h-16 rounded-xl border border-zinc-300 dark:border-zinc-700 overflow-hidden bg-zinc-200 dark:bg-zinc-800 shrink-0 relative">
                       <img 
                         src={formatted || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'} 
                         alt={name}
@@ -882,12 +947,32 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
                         }}
                         className="w-full h-full object-cover" 
                       />
+                      {isUploadingThis && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <div className="w-5 h-5 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex-1 w-full">
-                      <label className="block text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider mb-1">
-                        {name}
-                      </label>
+                    <div className="flex-1 w-full space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">
+                          {name}
+                        </label>
+                        <label className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-[10px] font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-200 transition-colors">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            disabled={isUploadingThis || isSavingImages}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUploadImageFile(prodId, file);
+                            }}
+                          />
+                          <span>📁 {isUploadingThis ? 'Caricamento...' : 'Scegli Foto'}</span>
+                        </label>
+                      </div>
                       <input
                         type="text"
                         value={currentLink}
@@ -909,8 +994,9 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
               <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
                 <button
                   type="button"
+                  disabled={isSavingImages}
                   onClick={handleResetProductLinks}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 transition-colors"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 transition-colors disabled:opacity-50"
                 >
                   Ripristina Foto Predefinite
                 </button>
@@ -918,16 +1004,25 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button
                     type="button"
+                    disabled={isSavingImages}
                     onClick={() => setShowImagesModal(false)}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 disabled:opacity-50"
                   >
                     Annulla
                   </button>
                   <button
                     type="submit"
-                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold uppercase tracking-wider transition-all shadow-md"
+                    disabled={isSavingImages}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    Salva Modifiche
+                    {isSavingImages ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                        <span>Salvataggio Cloud...</span>
+                      </>
+                    ) : (
+                      <span>Salva Modifiche</span>
+                    )}
                   </button>
                 </div>
               </div>

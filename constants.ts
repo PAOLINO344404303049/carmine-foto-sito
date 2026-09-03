@@ -8,6 +8,7 @@ import {
   getAllCustomProductImages,
   saveCustomProductImageLinks,
   resetCustomProductImageLinks,
+  fetchCustomProductImageLinks,
   formatImageUrl,
   PRODUCT_NAMES
 } from './src/productImages';
@@ -20,6 +21,7 @@ export {
   getAllCustomProductImages,
   saveCustomProductImageLinks,
   resetCustomProductImageLinks,
+  fetchCustomProductImageLinks,
   formatImageUrl,
   PRODUCT_NAMES
 };

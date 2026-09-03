@@ -4,6 +4,7 @@ import { CustomProduct, Order, OrderStatus, PaymentMethod, User } from '../types
 import { 
   getCustomProducts, 
   getCustomProductImage,
+  fetchCustomProductImageLinks,
   STUDIO_ADDRESS, 
   STUDIO_PHONE, 
   SUMUP_CUSTOM_PRODUCTS_URL, 
@@ -45,8 +46,14 @@ const CustomProducts: FC<CustomProductsProps> = ({ navigate, user, addOrder }) =
   const [products, setProducts] = useState<CustomProduct[]>(() => getCustomProducts());
   const [selectedProduct, setSelectedProduct] = useState<CustomProduct | null>(null);
 
-  // Ascolta aggiornamenti dei link foto in tempo reale
+  // Ascolta aggiornamenti dei link foto in tempo reale e sincronizza con il Cloud
   useEffect(() => {
+    fetchCustomProductImageLinks().then(() => {
+      const refreshed = getCustomProducts();
+      setProducts(refreshed);
+      setSelectedProduct(prev => prev ? refreshed.find(p => p.id === prev.id) || prev : null);
+    }).catch(() => {});
+
     const handleUpdate = () => {
       const refreshed = getCustomProducts();
       setProducts(refreshed);
