@@ -38,39 +38,71 @@ export const useStore = () => {
     try {
       console.log(`[STORE] Recupero ordini per: ${user.email} (Ruolo: ${user.role})`);
       
-      let query = supabase.from('orders').select('*');
-      
-      if (user.email !== ADMIN_EMAIL) {
-        query = query.eq('customer_email', user.email);
+      let rawData: SupabaseOrder[] | null = null;
+
+      // Se l'utente è l'amministratore, prova prima l'API server per recuperare tutti gli ordini (bypassa restrizioni RLS)
+      if (user.role === 'admin' || user.email === ADMIN_EMAIL) {
+        try {
+          const apiRes = await fetch('/api/orders');
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json.success && Array.isArray(json.data)) {
+              rawData = json.data;
+              console.log(`[STORE] Recuperati ${rawData.length} ordini tramite API server.`);
+            }
+          }
+        } catch (apiErr) {
+          console.warn("[STORE] Fetch API server /api/orders non riuscito, provo client Supabase:", apiErr);
+        }
       }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
-
-      if (error) {
-        console.error("[STORE] Errore fetch ordini Supabase:", error.message);
-        return;
+      // Se non abbiamo ancora i dati (es. utente non admin o fallback)
+      if (!rawData) {
+        let query = supabase.from('orders').select('*');
+        if (user.role !== 'admin' && user.email !== ADMIN_EMAIL) {
+          query = query.eq('customer_email', user.email);
+        }
+        const { data, error } = await query.order('created_at', { ascending: false });
+        if (error) {
+          console.error("[STORE] Errore fetch ordini Supabase client:", error.message);
+          return;
+        }
+        rawData = (data as SupabaseOrder[]) || [];
       }
 
-      if (data) {
-        const mappedOrders: Order[] = (data as SupabaseOrder[]).map((item) => {
+      if (rawData) {
+        const mappedOrders: Order[] = rawData.map((item) => {
           let orderType: 'photo_package' | 'custom_product' = 'photo_package';
-          let packageName = 'Pacchetto 100 Foto';
+          let packageName = item.package || 'Pacchetto 100 Foto';
           let packageId = 'standard_100';
           let total = 20;
           let size: string | undefined = undefined;
           let deviceModel: string | undefined = undefined;
           let quantity: number = (item.photo_urls || []).length || 1;
           let cleanPhone = item.phone || '';
-          let userName = item.customer_email.split('@')[0];
+          let userName = item.customer_name || item.customer_email.split('@')[0];
           let customPaymentMethod: 'pickup_pay_in_store' | 'pickup_pay_now' | undefined = undefined;
           let paymentChoice: string | undefined = undefined;
 
           // Verifica se l'ordine contiene metadati di Prodotto Personalizzato
-          if (item.phone && (item.phone.includes('[CUSTOM_PRODUCT:') || item.phone.includes('[PRODOTTO PERSONALIZZATO') || item.phone.includes('T-Shirt') || item.phone.includes('Portachiavi') || item.phone.includes('Collana') || item.phone.includes('Cuscino') || item.phone.includes('Cover'))) {
+          const isCustom = (item.phone && (
+            item.phone.includes('[CUSTOM_PRODUCT:') || 
+            item.phone.includes('[PRODOTTO PERSONALIZZATO') || 
+            item.phone.includes('T-Shirt') || 
+            item.phone.includes('Portachiavi') || 
+            item.phone.includes('Collana') || 
+            item.phone.includes('Cuscino') || 
+            item.phone.includes('Cover') ||
+            item.phone.includes('Tazza') ||
+            item.phone.includes('Puzzle')
+          )) || (item.package && item.package !== 'Pacchetto 100 Foto' && item.package !== 'standard_100');
+
+          if (isCustom) {
             orderType = 'custom_product';
+            if (item.package) packageName = item.package;
             
             // Parsing JSON se presente
-            const jsonMatch = item.phone.match(/\[CUSTOM_PRODUCT:(.*?)\]/);
+            const jsonMatch = item.phone ? item.phone.match(/\[CUSTOM_PRODUCT:(.*?)\]/) : null;
             if (jsonMatch && jsonMatch[1]) {
               try {
                 const parsed = JSON.parse(jsonMatch[1]);
@@ -82,17 +114,28 @@ export const useStore = () => {
                 if (parsed.name) userName = parsed.lastName ? `${parsed.name} ${parsed.lastName}` : parsed.name;
                 if (parsed.paymentChoice) paymentChoice = parsed.paymentChoice;
                 if (parsed.paymentMethod) customPaymentMethod = parsed.paymentMethod;
-                cleanPhone = item.phone.replace(/\[CUSTOM_PRODUCT:.*?\]/, '').trim();
+                cleanPhone = (item.phone || '').replace(/\[CUSTOM_PRODUCT:.*?\]/, '').trim();
               } catch (e) {
                 // Fallback silenzioso
               }
             } else {
               // Estrazione da pattern descrittivo [Prodotto ...]
-              const bracketMatch = item.phone.match(/\[(.*?)\]/);
+              const bracketMatch = item.phone ? item.phone.match(/\[(.*?)\]/) : null;
               if (bracketMatch && bracketMatch[1]) {
                 packageName = bracketMatch[1];
-                cleanPhone = item.phone.replace(/\[.*?\]/, '').trim();
+                cleanPhone = (item.phone || '').replace(/\[.*?\]/, '').trim();
               }
+            }
+          } else {
+            // Per Pacchetto 100 Foto
+            if (item.phone && item.phone.includes('[PAGAMENTO:Paga ora]')) {
+              paymentChoice = 'Paga ora';
+              customPaymentMethod = 'pickup_pay_now';
+              cleanPhone = item.phone.replace(/\[PAGAMENTO:.*?\]/, '').trim();
+            } else if (item.phone && item.phone.includes('[PAGAMENTO:Paga in sede]')) {
+              paymentChoice = 'Paga in sede';
+              customPaymentMethod = 'pickup_pay_in_store';
+              cleanPhone = item.phone.replace(/\[PAGAMENTO:.*?\]/, '').trim();
             }
           }
 
@@ -241,15 +284,36 @@ export const useStore = () => {
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     console.log(`[STORE] Aggiornamento status ordine ${orderId} a ${status}`);
     
-    // Esegue solo l'UPDATE della colonna status come richiesto
-    const { error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', orderId);
+    let updated = false;
+    // 1. Prova prima tramite endpoint server (bypassa blocchi RLS)
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, status })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          updated = true;
+          console.log(`[STORE] Status ordine ${orderId} aggiornato con successo via API server.`);
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[STORE] API server PATCH /api/orders non raggiungibile, provo client Supabase:", apiErr);
+    }
 
-    if (error) {
-      console.error("[STORE] Errore update status Supabase:", error.message);
-      throw error;
+    // 2. Fallback con client Supabase
+    if (!updated) {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error("[STORE] Errore update status Supabase:", error.message);
+        throw error;
+      }
     }
 
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));

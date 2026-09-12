@@ -35,6 +35,9 @@ export const DEFAULT_PRODUCT_IMAGE_LINKS: Record<string, string> = {
 
   // 6. Cover Personalizzata Smartphone
   'phone-case-custom': 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?auto=format&fit=crop&w=800&q=80',
+
+  // 7. Puzzle Personalizzato
+  'puzzle-custom': 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&w=800&q=80',
 };
 
 /**
@@ -47,6 +50,7 @@ export const PRODUCT_NAMES: Record<string, string> = {
   'necklace-custom': 'Collana Personalizzata',
   'pillow-custom': 'Cuscino Personalizzato (30x30 cm)',
   'phone-case-custom': 'Cover Personalizzata Smartphone',
+  'puzzle-custom': 'Puzzle Personalizzato',
 };
 
 /**

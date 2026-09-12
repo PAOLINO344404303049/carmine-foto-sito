@@ -95,6 +95,15 @@ export const getCustomProducts = (): CustomProduct[] => [
     image: getCustomProductImage('phone-case-custom'),
     category: 'phone_case',
     requiresDeviceModel: true
+  },
+  {
+    id: 'puzzle-custom',
+    name: 'Puzzle Personalizzato',
+    shortDescription: 'Elegante puzzle con la tua fotografia preferita stampata in altissima definizione. Un ricordo speciale e divertente da comporre.',
+    price: 10,
+    image: getCustomProductImage('puzzle-custom'),
+    category: 'puzzle',
+    requiresDeviceModel: false
   }
 ];
 
@@ -107,7 +116,7 @@ export const STUDIO_PHONE = "340 952 3725";
 export const STUDIO_EMAIL = "carminephotography0@gmail.com";
 export const INSTAGRAM_USER = "@carmine_photograpy";
 export const INSTAGRAM_URL = "https://www.instagram.com/carmine_photograpy/";
-export const SUMUP_PAY_LINK = "https://pay.sumup.com/b2c/XS2N1R43GQ";
+export const SUMUP_PAY_LINK = "https://pay.sumup.com/b2c/QHZYK2BJ"; // Link SumUp da 20 € per Pacchetto 100 Foto
 export const SUMUP_CUSTOM_PRODUCTS_URL = "https://pay.sumup.com/b2c/Q6R1I849"; // Link SumUp da 10 € per prodotti personalizzati
 export const WHATSAPP_LINK = `https://wa.me/393409523725`;
 

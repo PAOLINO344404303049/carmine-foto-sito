@@ -21,6 +21,8 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
   const [isUploading, setIsUploading] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [paymentOption, setPaymentOption] = useState<'pickup_pay_in_store' | 'pickup_pay_now'>('pickup_pay_in_store');
+  const [orderConfirmedChoice, setOrderConfirmedChoice] = useState<'pickup_pay_in_store' | 'pickup_pay_now'>('pickup_pay_in_store');
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,26 +86,45 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
         });
       }
 
+      const isPayNow = paymentOption === 'pickup_pay_now';
+      const paymentChoiceText = isPayNow ? 'Paga ora' : 'Paga in sede';
+      const paymentMethod = isPayNow ? PaymentMethod.ONLINE_SUMUP : PaymentMethod.AT_COLLECTION;
+
       const newOrderData: Order = {
         id: `TEMP-${Date.now()}`, 
         userId: user.id,
         userName: user.name,
         userEmail: user.email,
-        phone: user.phone || '',
+        phone: `${user.phone || ''} [PAGAMENTO:${paymentChoiceText}]`.trim(),
         packageId: selectedPackage.id,
         packageName: selectedPackage.name,
         photos: uploadedUrls,
         status: OrderStatus.PENDING_PAYMENT, 
-        paymentMethod: PaymentMethod.ONLINE_SUMUP,
+        paymentMethod: paymentMethod,
         createdAt: new Date().toISOString(),
-        total: selectedPackage.price
+        total: selectedPackage.price,
+        customPaymentMethod: paymentOption,
+        paymentChoice: paymentChoiceText
       };
 
       const savedOrder = await addOrder(newOrderData);
-      setCurrentOrderId(savedOrder?.id || newOrderData.id);
+      const generatedOrderId = savedOrder?.id || newOrderData.id;
+      setCurrentOrderId(generatedOrderId);
+      setOrderConfirmedChoice(paymentOption);
       resetForm();
       setShowCheckout(true);
-      EmailService.sendOrderConfirmation({...newOrderData, id: currentOrderId || ''}).catch(err => console.error(err));
+
+      // Invia email di conferma
+      EmailService.sendOrderConfirmation({...newOrderData, id: generatedOrderId}).catch(err => console.error(err));
+
+      // Se l'utente ha scelto "Paga ora", apri la schermata sicura SumUp
+      if (isPayNow) {
+        try {
+          window.open(SUMUP_PAY_LINK, '_blank', 'noopener,noreferrer');
+        } catch (e) {
+          console.warn("[DASHBOARD] Impossibile aprire finestra popup per SumUp:", e);
+        }
+      }
     } catch (error: any) {
       alert("Errore: " + error.message);
     } finally {
@@ -112,19 +133,7 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
   };
 
   const finalizePayment = async () => {
-    if (!currentOrderId) return;
-    window.open(SUMUP_PAY_LINK, '_blank');
-    setIsFinalizing(true);
-    try {
-      await updateStatus(currentOrderId, OrderStatus.PAID);
-      setShowCheckout(false);
-      setCurrentOrderId(null);
-      alert("Pagamento registrato!");
-    } catch (error) {
-      alert("Errore pagamento.");
-    } finally {
-      setIsFinalizing(false);
-    }
+    window.open(SUMUP_PAY_LINK, '_blank', 'noopener,noreferrer');
   };
 
   const currentStatusColor = (status: OrderStatus) => {
@@ -214,42 +223,145 @@ const Dashboard: FC<DashboardProps> = ({ user, orders, addOrder, updateStatus, n
                 )}
 
                 {uploadedPhotosPreview.length > 0 && (
-                  <div className="pt-8 border-t border-gray-100 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-6">
-                    <p className="text-xl md:text-2xl font-serif font-bold text-black dark:text-white italic">Prezzo: €{selectedPackage.price}</p>
-                    <button 
-                      onClick={handleSubmit} 
-                      disabled={isUploading}
-                      className="w-full sm:w-auto px-12 py-5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-200 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
-                    >
-                      {isUploading ? 'Salvataggio...' : 'Conferma e procedi'}
-                    </button>
+                  <div className="pt-8 border-t border-gray-100 dark:border-zinc-800 space-y-6">
+                    {/* SCELTA METODO DI PAGAMENTO */}
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-3">
+                        Metodo di Pagamento:
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* OPZIONE 1: Paga in sede */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setPaymentOption('pickup_pay_in_store')}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPaymentOption('pickup_pay_in_store'); }}
+                          className={`cursor-pointer p-5 rounded-2xl border text-left transition-all ${
+                            paymentOption === 'pickup_pay_in_store'
+                              ? 'border-black dark:border-white bg-black/5 dark:bg-white/5 ring-1 ring-black dark:ring-white'
+                              : 'border-gray-200 dark:border-zinc-800 hover:border-gray-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                              paymentOption === 'pickup_pay_in_store' ? 'border-black dark:border-white bg-black dark:bg-white' : 'border-gray-400'
+                            }`}>
+                              {paymentOption === 'pickup_pay_in_store' && <span className="w-1.5 h-1.5 rounded-full bg-white dark:bg-black block" />}
+                            </div>
+                            <span className="font-bold text-sm text-black dark:text-white">Paga in sede</span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
+                            Ritiro in sede • Paghi in contanti o POS al momento del ritiro delle stampe.
+                          </p>
+                        </div>
+
+                        {/* OPZIONE 2: Paga ora */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setPaymentOption('pickup_pay_now')}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setPaymentOption('pickup_pay_now'); }}
+                          className={`cursor-pointer p-5 rounded-2xl border text-left transition-all ${
+                            paymentOption === 'pickup_pay_now'
+                              ? 'border-black dark:border-white bg-black/5 dark:bg-white/5 ring-1 ring-black dark:ring-white'
+                              : 'border-gray-200 dark:border-zinc-800 hover:border-gray-400'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                              paymentOption === 'pickup_pay_now' ? 'border-black dark:border-white bg-black dark:bg-white' : 'border-gray-400'
+                            }`}>
+                              {paymentOption === 'pickup_pay_now' && <span className="w-1.5 h-1.5 rounded-full bg-white dark:bg-black block" />}
+                            </div>
+                            <span className="font-bold text-sm text-black dark:text-white">Paga ora online</span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
+                            Ritiro in sede • Pagamento anticipato sicuro di €20 tramite SumUp.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-4">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-widest text-gray-400 block">Totale Pacchetto</span>
+                        <p className="text-2xl font-serif font-bold text-black dark:text-white italic">€ {selectedPackage.price.toFixed(2)}</p>
+                      </div>
+                      <button 
+                        onClick={handleSubmit} 
+                        disabled={isUploading}
+                        className="w-full sm:w-auto px-12 py-5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-200 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
+                      >
+                        {isUploading ? 'Salvataggio foto in corso...' : 'Conferma Ordine 100 Foto →'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
             ) : (
               <div className="space-y-8 py-4">
-                <div className="text-center mb-10">
-                   <h3 className="text-2xl md:text-3xl font-serif mb-4 italic dark:text-white">Ordine Ricevuto!</h3>
-                   <p className="text-gray-500 dark:text-gray-400 italic text-sm">Abbiamo salvato correttamente le tue foto.</p>
-                </div>
-                
-                <div className="max-w-md mx-auto bg-gray-50 dark:bg-zinc-800 p-8 md:p-12 rounded-[50px] border border-gray-100 dark:border-zinc-700 text-center shadow-lg">
-                   <div className="w-20 h-20 bg-black dark:bg-white text-white dark:text-black rounded-[28px] flex items-center justify-center mx-auto mb-8 text-3xl shadow-xl">
+                {orderConfirmedChoice === 'pickup_pay_in_store' ? (
+                  /* SCHERMATA CONFERMA: PAGA IN SEDE */
+                  <div className="max-w-md mx-auto bg-gray-50 dark:bg-zinc-800/60 p-8 md:p-12 rounded-[50px] border border-gray-100 dark:border-zinc-700 text-center shadow-lg">
+                    <div className="w-20 h-20 bg-emerald-500 text-white rounded-[28px] flex items-center justify-center mx-auto mb-8 text-3xl shadow-xl">
+                      ✓
+                    </div>
+                    <h3 className="text-2xl md:text-3xl font-serif mb-2 italic dark:text-white">Ordine Confermato!</h3>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-6">
+                      Le tue 100 foto sono state salvate e inviate al laboratorio.
+                    </p>
+
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-5 mb-8 border border-gray-100 dark:border-zinc-700/80 text-left space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-400">Modalità di pagamento:</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">Paga in sede</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-400">Totale da saldare al ritiro:</span>
+                        <span className="font-bold text-black dark:text-white font-mono">€ 20,00</span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-zinc-800">
+                        Potrai saldare l'importo direttamente in contanti o con POS quando ritirerai le tue stampe in studio.
+                      </p>
+                    </div>
+
+                    <button 
+                      onClick={() => setShowCheckout(false)}
+                      className="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-200 shadow-xl transition-all uppercase tracking-[0.2em] text-[10px]"
+                    >
+                      Visualizza i tuoi ordini
+                    </button>
+                  </div>
+                ) : (
+                  /* SCHERMATA CONFERMA: PAGA ORA CON SUMUP */
+                  <div className="max-w-md mx-auto bg-gray-50 dark:bg-zinc-800 p-8 md:p-12 rounded-[50px] border border-gray-100 dark:border-zinc-700 text-center shadow-lg">
+                    <div className="w-20 h-20 bg-black dark:bg-white text-white dark:text-black rounded-[28px] flex items-center justify-center mx-auto mb-8 text-3xl shadow-xl">
                       <i className="fas fa-credit-card"></i>
-                   </div>
-                   <h4 className="font-bold text-lg mb-4 uppercase tracking-widest italic dark:text-white">Pagamento sicuro</h4>
-                   <p className="text-[10px] text-gray-400 dark:text-gray-500 mb-10 leading-relaxed font-bold uppercase tracking-widest leading-loose">
-                      Completa l'operazione con SumUp per avviare la stampa.
-                   </p>
-                   <button 
-                    onClick={finalizePayment}
-                    disabled={isFinalizing}
-                    className="w-full py-5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-200 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-4 disabled:opacity-50"
-                   >
-                      {isFinalizing ? 'Attendi...' : 'Paga ora online'}
-                      {!isFinalizing && <i className="fas fa-external-link-alt"></i>}
-                   </button>
-                </div>
+                    </div>
+                    <h4 className="font-bold text-lg mb-2 uppercase tracking-widest italic dark:text-white">Ordine Registrato!</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
+                      Le tue 100 foto sono state salvate correttamente.
+                    </p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-8 leading-relaxed font-medium uppercase tracking-wider">
+                      Completa l'operazione su SumUp (€20) per avviare subito la stampa.
+                    </p>
+                    <div className="space-y-3">
+                      <button 
+                        onClick={finalizePayment}
+                        className="w-full py-5 bg-black dark:bg-white text-white dark:text-black rounded-full font-bold hover:bg-gray-800 dark:hover:bg-gray-200 shadow-2xl transition-all uppercase tracking-[0.2em] text-[10px] flex items-center justify-center gap-4"
+                      >
+                        <span>Paga ora su SumUp (€20)</span>
+                        <i className="fas fa-external-link-alt"></i>
+                      </button>
+                      <button 
+                        onClick={() => setShowCheckout(false)}
+                        className="w-full py-3 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white text-[10px] font-bold uppercase tracking-wider"
+                      >
+                        Ho già completato / Chiudi
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

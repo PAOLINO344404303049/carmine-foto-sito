@@ -50,7 +50,7 @@ export interface CustomProduct {
   shortDescription: string;
   price: number;
   image: string;
-  category: 't-shirt' | 'keychain' | 'necklace' | 'pillow' | 'phone_case' | 'mug';
+  category: 't-shirt' | 'keychain' | 'necklace' | 'pillow' | 'phone_case' | 'mug' | 'puzzle';
   sizes?: string[]; // Per t-shirt: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
   requiresDeviceModel?: boolean; // Per cover smartphone
   maxPhotos?: number; // Per tazza: fino a 3 foto

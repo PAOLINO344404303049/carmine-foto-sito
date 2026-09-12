@@ -163,7 +163,7 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
       paidOrProcessing: orders.filter(o => o.status === OrderStatus.PAID || o.status === OrderStatus.PROCESSING).length,
       ready: orders.filter(o => o.status === OrderStatus.PRINTED).length,
       collected: orders.filter(o => o.status === OrderStatus.COLLECTED).length,
-      customProductsCount: orders.filter(o => o.orderType === 'custom_product' || (o.packageName && (o.packageName.includes('T-Shirt') || o.packageName.includes('Portachiavi') || o.packageName.includes('Collana') || o.packageName.includes('Cuscino') || o.packageName.includes('Cover') || o.packageName.includes('Tazza')))).length,
+      customProductsCount: orders.filter(o => o.orderType === 'custom_product' || (o.packageName && (o.packageName.includes('T-Shirt') || o.packageName.includes('Portachiavi') || o.packageName.includes('Collana') || o.packageName.includes('Cuscino') || o.packageName.includes('Cover') || o.packageName.includes('Tazza') || o.packageName.includes('Puzzle')))).length,
     };
   }, [orders]);
 
@@ -523,7 +523,8 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
                   order.packageName.includes('Collana') || 
                   order.packageName.includes('Cuscino') || 
                   order.packageName.includes('Cover') ||
-                  order.packageName.includes('Tazza')
+                  order.packageName.includes('Tazza') ||
+                  order.packageName.includes('Puzzle')
                 ));
 
               const photosList = order.photos || [];

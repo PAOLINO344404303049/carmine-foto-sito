@@ -277,7 +277,12 @@ async function startServer() {
 
       console.log(`[DELETE-ORDER] Eliminazione ordine: ${orderId}`);
       const supabaseUrl = process.env.SUPABASE_URL || 'https://thiyeerwwhwarekudhyg.supabase.co';
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                          process.env.SUPABASE_SERVICE_KEY || 
+                          process.env.SUPABASE_SECRET_KEY || 
+                          process.env.SUPABASE_SERVICE_ROLE || 
+                          process.env.SUPABASE_ANON_KEY || 
+                          'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
 
       const supabaseServer = createClient(supabaseUrl, supabaseKey, {
         auth: { autoRefreshToken: false, persistSession: false }
@@ -299,6 +304,80 @@ async function startServer() {
     } catch (err: any) {
       console.error("[DELETE-ORDER] Errore server:", err?.message || err);
       res.status(500).json({ error: "Errore interno durante l'eliminazione" });
+    }
+  });
+
+  // API PER RECUPERO ORDINI PER IL PANNELLO ADMIN (Bypassa limitazioni RLS)
+  app.get("/api/orders", async (req, res) => {
+    console.log("[ORDERS-API] Richiesta recupero lista ordini ricevuta");
+    try {
+      const supabaseUrl = process.env.SUPABASE_URL || 'https://thiyeerwwhwarekudhyg.supabase.co';
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                          process.env.SUPABASE_SERVICE_KEY || 
+                          process.env.SUPABASE_SECRET_KEY || 
+                          process.env.SUPABASE_SERVICE_ROLE || 
+                          process.env.SUPABASE_ANON_KEY || 
+                          'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
+
+      const supabaseServer = createClient(supabaseUrl, supabaseKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+
+      const { data, error } = await supabaseServer
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("[ORDERS-API] Errore Supabase get orders:", error.message);
+        res.status(500).json({ error: error.message });
+        return;
+      }
+
+      res.json({ success: true, data: data || [] });
+    } catch (err: any) {
+      console.error("[ORDERS-API] Eccezione GET /api/orders:", err?.message || err);
+      res.status(500).json({ error: "Errore interno durante il recupero ordini" });
+    }
+  });
+
+  app.patch("/api/orders", async (req, res) => {
+    console.log("[ORDERS-API] Richiesta modifica stato ordine ricevuta");
+    try {
+      const { orderId, status } = req.body || {};
+      if (!orderId || !status) {
+        res.status(400).json({ error: "orderId e status sono obbligatori" });
+        return;
+      }
+
+      const supabaseUrl = process.env.SUPABASE_URL || 'https://thiyeerwwhwarekudhyg.supabase.co';
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                          process.env.SUPABASE_SERVICE_KEY || 
+                          process.env.SUPABASE_SECRET_KEY || 
+                          process.env.SUPABASE_SERVICE_ROLE || 
+                          process.env.SUPABASE_ANON_KEY || 
+                          'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
+
+      const supabaseServer = createClient(supabaseUrl, supabaseKey, {
+        auth: { autoRefreshToken: false, persistSession: false }
+      });
+
+      const { data, error } = await supabaseServer
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId)
+        .select();
+
+      if (error) {
+        console.error("[ORDERS-API] Errore aggiornamento stato Supabase:", error.message);
+        res.status(500).json({ error: error.message });
+        return;
+      }
+
+      res.json({ success: true, data });
+    } catch (err: any) {
+      console.error("[ORDERS-API] Eccezione PATCH /api/orders:", err?.message || err);
+      res.status(500).json({ error: "Errore interno durante l'aggiornamento stato" });
     }
   });
 
@@ -352,7 +431,12 @@ async function startServer() {
       // 1. SALVATAGGIO DELL'ORDINE SU SUPABASE LATO SERVER
       let savedOrderId = orderId || `ord-custom-${Date.now()}`;
       const supabaseUrl = process.env.SUPABASE_URL || 'https://thiyeerwwhwarekudhyg.supabase.co';
-      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
+      const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                          process.env.SUPABASE_SERVICE_KEY || 
+                          process.env.SUPABASE_SECRET_KEY || 
+                          process.env.SUPABASE_SERVICE_ROLE || 
+                          process.env.SUPABASE_ANON_KEY || 
+                          'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
 
       try {
         const supabaseServer = createClient(supabaseUrl, supabaseKey, {
@@ -377,7 +461,9 @@ async function startServer() {
         const phoneToSave = `${cleanPhone} [CUSTOM_PRODUCT:${JSON.stringify(meta)}]`;
 
         const dbOrder = {
+          customer_name: fullName,
           customer_email: cleanEmail.toLowerCase(),
+          package: productName,
           phone: phoneToSave,
           photo_urls: allPhotos,
           status: 'PENDING',
@@ -390,13 +476,13 @@ async function startServer() {
           .select();
 
         if (dbError) {
-          console.warn("[CUSTOM-ORDER] Avviso inserimento Supabase lato server:", dbError.message);
+          console.error("[CUSTOM-ORDER] ERRORE inserimento Supabase lato server:", dbError.message);
         } else if (dbData && dbData.length > 0) {
           savedOrderId = dbData[0].id;
           console.log("[CUSTOM-ORDER] Ordine registrato con successo nel DB Supabase, ID:", savedOrderId);
         }
       } catch (dbEx: any) {
-        console.warn("[CUSTOM-ORDER] Eccezione connessione Supabase server-side:", dbEx.message);
+        console.error("[CUSTOM-ORDER] Eccezione connessione Supabase server-side:", dbEx.message);
       }
 
       if (!resend) {

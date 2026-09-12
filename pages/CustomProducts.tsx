@@ -24,10 +24,73 @@ interface UploadedPhoto {
   preview: string;
 }
 
+// Helper per preparare e ottimizzare l'immagine client-side se supera la soglia per-request di Cloudinary
+// Permette l'upload fino a 25 MB preservando l'altissima qualità per la stampa
+const prepareImageForUpload = async (file: File): Promise<File | Blob> => {
+  const CLOUDINARY_MAX_DIRECT_BYTES = 9.5 * 1024 * 1024; // 9.5 MB
+  if (file.size <= CLOUDINARY_MAX_DIRECT_BYTES) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const canvas = document.createElement('canvas');
+      let width = img.naturalWidth || img.width;
+      let height = img.naturalHeight || img.height;
+
+      // Mantieni altissima risoluzione (fino a 4000px, perfetta per stampa di grandi dimensioni)
+      const MAX_DIMENSION = 4000;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height * MAX_DIMENSION) / width);
+          width = MAX_DIMENSION;
+        } else {
+          width = Math.round((width * MAX_DIMENSION) / height);
+          height = MAX_DIMENSION;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob && blob.size < file.size) {
+            const optimizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+            resolve(optimizedFile);
+          } else {
+            resolve(file);
+          }
+        },
+        'image/jpeg',
+        0.92
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+    img.src = objectUrl;
+  });
+};
+
 // Funzione di upload su Cloudinary che riutilizza lo stesso storage degli ordini esistenti
 const uploadToCloudinary = async (file: File): Promise<string> => {
+  const fileToUpload = await prepareImageForUpload(file);
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", fileToUpload);
   formData.append("upload_preset", "fotocs");
 
   const response = await fetch("https://api.cloudinary.com/v1_1/divyx0t5b/image/upload", {
@@ -129,6 +192,15 @@ const CustomProducts: FC<CustomProductsProps> = ({ navigate, user, addOrder }) =
     const fileArray = Array.from(files).filter(f => f.type.startsWith('image/'));
     if (fileArray.length === 0) {
       setErrorMessage("Seleziona file immagine validi (JPEG, PNG, WEBP).");
+      return;
+    }
+
+    // Controllo dimensione massima: 25 MB per singola immagine
+    const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
+    const oversizedFile = fileArray.find(f => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversizedFile) {
+      const sizeMB = (oversizedFile.size / (1024 * 1024)).toFixed(1);
+      setErrorMessage(`La fotografia "${oversizedFile.name}" supera il limite massimo consentito di 25 MB (dimensione attuale: ${sizeMB} MB). Seleziona un'immagine fino a 25 MB.`);
       return;
     }
 

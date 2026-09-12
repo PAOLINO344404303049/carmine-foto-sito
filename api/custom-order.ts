@@ -78,8 +78,15 @@ export default async function handler(req: any, res: any) {
 
     // 1. SALVATAGGIO DELL'ORDINE SU SUPABASE LATO SERVER (Evita violazioni RLS per clienti guest)
     let savedOrderId = orderId || `ord-custom-${Date.now()}`;
+    let dbSuccess = false;
+    let dbErrorMessage = '';
     const supabaseUrl = process.env.SUPABASE_URL || 'https://thiyeerwwhwarekudhyg.supabase.co';
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                        process.env.SUPABASE_SERVICE_KEY || 
+                        process.env.SUPABASE_SECRET_KEY || 
+                        process.env.SUPABASE_SERVICE_ROLE || 
+                        process.env.SUPABASE_ANON_KEY || 
+                        'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
 
     try {
       const supabaseServer = createClient(supabaseUrl, supabaseKey, {
@@ -104,7 +111,9 @@ export default async function handler(req: any, res: any) {
       const phoneToSave = `${cleanPhone} [CUSTOM_PRODUCT:${JSON.stringify(meta)}]`;
 
       const dbOrder = {
+        customer_name: fullName,
         customer_email: cleanEmail.toLowerCase(),
+        package: productName,
         phone: phoneToSave,
         photo_urls: allPhotos,
         status: 'PENDING',
@@ -117,13 +126,16 @@ export default async function handler(req: any, res: any) {
         .select();
 
       if (dbError) {
-        console.warn("[CUSTOM-ORDER] Avviso inserimento Supabase lato server:", dbError.message);
+        dbErrorMessage = dbError.message;
+        console.error("[CUSTOM-ORDER] ERRORE INSERIMENTO SUPABASE LATO SERVER:", dbError.message, dbError);
       } else if (dbData && dbData.length > 0) {
         savedOrderId = dbData[0].id;
+        dbSuccess = true;
         console.log("[CUSTOM-ORDER] Ordine registrato con successo nel DB Supabase, ID:", savedOrderId);
       }
     } catch (dbEx: any) {
-      console.warn("[CUSTOM-ORDER] Eccezione connessione Supabase server-side:", dbEx.message);
+      dbErrorMessage = dbEx.message || 'Eccezione Supabase';
+      console.error("[CUSTOM-ORDER] Eccezione connessione Supabase server-side:", dbEx.message);
     }
 
     // 2. INVIO NOTIFICA EMAIL VIA RESEND
