@@ -4,7 +4,9 @@ import { User, Order, OrderStatus, PaymentMethod } from '../types';
 import { supabase } from './supabase';
 
 const AUTH_KEY = 'studio_auth_v2';
-const ADMIN_EMAIL = "carminephotography0@gmail.com";
+export const ADMIN_EMAILS = ["carminephotography0@gmail.com", "paolinofoglia01@gmail.com"];
+export const isAdminEmail = (email?: string | null) => 
+  email ? ADMIN_EMAILS.some(e => e.toLowerCase() === email.toLowerCase()) : false;
 
 // Interfaccia per mappare esattamente le colonne della tabella Supabase
 interface SupabaseOrder {
@@ -19,7 +21,16 @@ interface SupabaseOrder {
 export const useStore = () => {
   const [user, setUser] = useState<User | null>(() => {
     const stored = localStorage.getItem(AUTH_KEY);
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed && parsed.email && isAdminEmail(parsed.email)) {
+        parsed.role = 'admin';
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
   });
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -41,7 +52,7 @@ export const useStore = () => {
       let rawData: SupabaseOrder[] | null = null;
 
       // Se l'utente è l'amministratore, prova prima l'API server per recuperare tutti gli ordini (bypassa restrizioni RLS)
-      if (user.role === 'admin' || user.email === ADMIN_EMAIL) {
+      if (user.role === 'admin' || isAdminEmail(user.email)) {
         try {
           const apiRes = await fetch('/api/orders');
           if (apiRes.ok) {
@@ -59,7 +70,7 @@ export const useStore = () => {
       // Se non abbiamo ancora i dati (es. utente non admin o fallback)
       if (!rawData) {
         let query = supabase.from('orders').select('*');
-        if (user.role !== 'admin' && user.email !== ADMIN_EMAIL) {
+        if (user.role !== 'admin' && !isAdminEmail(user.email)) {
           query = query.eq('customer_email', user.email);
         }
         const { data, error } = await query.order('created_at', { ascending: false });
@@ -189,7 +200,7 @@ export const useStore = () => {
       throw authError;
     }
 
-    const role = email.toLowerCase() === ADMIN_EMAIL.toLowerCase() ? 'admin' : 'client';
+    const role = isAdminEmail(email) ? 'admin' : 'client';
     const loggedUser: User = {
       id: authData.user.id,
       name: authData.user.email?.split('@')[0] || email.split('@')[0],

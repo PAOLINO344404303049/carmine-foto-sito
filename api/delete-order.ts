@@ -35,7 +35,12 @@ export default async function handler(req: any, res: any) {
 
     console.log(`[DELETE-ORDER] Richiesta cancellazione ordine: ${orderId}`);
     const supabaseUrl = process.env.SUPABASE_URL || 'https://thiyeerwwhwarekudhyg.supabase.co';
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
+                        process.env.SUPABASE_SERVICE_KEY || 
+                        process.env.SUPABASE_SECRET_KEY || 
+                        process.env.SUPABASE_SERVICE_ROLE || 
+                        process.env.SUPABASE_ANON_KEY || 
+                        'sb_publishable_9L_viW10ykD4HaQ44sF2tQ_d_4aR09r';
 
     const supabaseServer = createClient(supabaseUrl, supabaseKey, {
       auth: { autoRefreshToken: false, persistSession: false }
