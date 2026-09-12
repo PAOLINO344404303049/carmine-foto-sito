@@ -14,7 +14,7 @@ import CustomProducts from './pages/CustomProducts';
 import Privacy from './pages/Privacy';
 import Cookie from './pages/Cookie';
 import CookieConsent from './components/CookieConsent';
-import { useStore } from './services/store';
+import { useStore, isAdminEmail } from './services/store';
 import { WHATSAPP_LINK, fetchCustomProductImageLinks } from './constants';
 
 const App: React.FC = () => {
@@ -67,12 +67,14 @@ const App: React.FC = () => {
           />
         ) : <Auth mode="login" navigate={navigate} onLogin={(email, pass) => store.login(email, pass)} />;
       case 'admin':
-        return store.user?.role === 'admin' ? (
+        return (store.user?.role === 'admin' || isAdminEmail(store.user?.email)) ? (
           <Admin 
             orders={store.orders} 
             updateStatus={store.updateOrderStatus} 
             deleteOrder={store.deleteOrder}
             onLogout={handleLogout}
+            refreshOrders={store.fetchOrders}
+            isLoading={store.loading}
           />
         ) : <Auth mode="login" navigate={navigate} onLogin={(email, pass) => store.login(email, pass)} />;
       case 'packages':

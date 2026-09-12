@@ -43,45 +43,72 @@ export const useStore = () => {
   }, [user]);
 
   const fetchOrders = async () => {
-    if (!user) return;
     setLoading(true);
     
     try {
-      console.log(`[STORE] Recupero ordini per: ${user.email} (Ruolo: ${user.role})`);
+      // Recupera utente corrente da stato o localStorage
+      let currentUser = user;
+      if (!currentUser) {
+        try {
+          const stored = localStorage.getItem(AUTH_KEY);
+          if (stored) {
+            currentUser = JSON.parse(stored);
+            if (currentUser && currentUser.email && isAdminEmail(currentUser.email)) {
+              currentUser.role = 'admin';
+            }
+          }
+        } catch {}
+      }
+
+      const isCurrentAdmin = currentUser && (currentUser.role === 'admin' || isAdminEmail(currentUser.email));
+      console.log(`[STORE] Inizio recupero ordini per: ${currentUser?.email || 'anonimo'} (Admin: ${!!isCurrentAdmin})`);
       
       let rawData: SupabaseOrder[] | null = null;
 
-      // Se l'utente è l'amministratore, prova prima l'API server per recuperare tutti gli ordini (bypassa restrizioni RLS)
-      if (user.role === 'admin' || isAdminEmail(user.email)) {
-        try {
-          const apiRes = await fetch('/api/orders');
-          if (apiRes.ok) {
+      // 1. Canale Primario: Server-side API /api/orders (Node/Express o Vercel Serverless Function con Service Role Key)
+      // Questo bypassa ogni limitazione RLS e restituisce tutti gli ordini per gli admin
+      try {
+        const apiRes = await fetch('/api/orders', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache'
+          }
+        });
+        if (apiRes.ok) {
+          const contentType = apiRes.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
             const json = await apiRes.json();
-            if (json.success && Array.isArray(json.data)) {
+            if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
               rawData = json.data;
-              console.log(`[STORE] Recuperati ${rawData.length} ordini tramite API server.`);
+              console.log(`[STORE] Recuperati con successo ${rawData.length} ordini tramite API server.`);
             }
           }
-        } catch (apiErr) {
-          console.warn("[STORE] Fetch API server /api/orders non riuscito, provo client Supabase:", apiErr);
+        }
+      } catch (apiErr) {
+        console.warn("[STORE] Fetch API server /api/orders non riuscito, provo client Supabase:", apiErr);
+      }
+
+      // 2. Canale Secondario: Client Supabase diretto
+      if (!rawData || rawData.length === 0) {
+        try {
+          let query = supabase.from('orders').select('*');
+          if (!isCurrentAdmin && currentUser?.email) {
+            query = query.eq('customer_email', currentUser.email);
+          }
+          const { data, error } = await query.order('created_at', { ascending: false });
+          if (!error && data && data.length > 0) {
+            rawData = data as SupabaseOrder[];
+            console.log(`[STORE] Recuperati ${rawData.length} ordini tramite Supabase client.`);
+          } else if (error) {
+            console.warn("[STORE] Supabase client get orders:", error.message);
+          }
+        } catch (clientErr) {
+          console.warn("[STORE] Eccezione fetch Supabase client:", clientErr);
         }
       }
 
-      // Se non abbiamo ancora i dati (es. utente non admin o fallback)
-      if (!rawData) {
-        let query = supabase.from('orders').select('*');
-        if (user.role !== 'admin' && !isAdminEmail(user.email)) {
-          query = query.eq('customer_email', user.email);
-        }
-        const { data, error } = await query.order('created_at', { ascending: false });
-        if (error) {
-          console.error("[STORE] Errore fetch ordini Supabase client:", error.message);
-          return;
-        }
-        rawData = (data as SupabaseOrder[]) || [];
-      }
-
-      if (rawData) {
+      if (rawData && rawData.length > 0) {
         const mappedOrders: Order[] = rawData.map((item) => {
           let orderType: 'photo_package' | 'custom_product' = 'photo_package';
           let packageName = item.package || 'Pacchetto 100 Foto';
@@ -138,7 +165,7 @@ export const useStore = () => {
               }
             }
           } else {
-            // Per Pacchetto 100 Foto
+            // Per Pacchetto 100 Foto o stampe fotografiche
             if (item.phone && item.phone.includes('[PAGAMENTO:Paga ora]')) {
               paymentChoice = 'Paga ora';
               customPaymentMethod = 'pickup_pay_now';
@@ -147,6 +174,18 @@ export const useStore = () => {
               paymentChoice = 'Paga in sede';
               customPaymentMethod = 'pickup_pay_in_store';
               cleanPhone = item.phone.replace(/\[PAGAMENTO:.*?\]/, '').trim();
+            }
+
+            if (item.photo_urls && item.photo_urls.length === 100) {
+              packageName = 'Pacchetto 100 Foto';
+              orderType = 'photo_package';
+              total = 20;
+            } else if (item.photo_urls && item.photo_urls.length === 1) {
+              packageName = 'Stampa Foto / Prodotto Personalizzato';
+              total = 20;
+            } else if (item.photo_urls && item.photo_urls.length > 0) {
+              packageName = `Pacchetto ${item.photo_urls.length} Foto`;
+              total = 20;
             }
           }
 
@@ -180,7 +219,7 @@ export const useStore = () => {
           };
         });
         setOrders(mappedOrders);
-        console.log(`[STORE] Caricati ${mappedOrders.length} ordini.`);
+        console.log(`[STORE] Mappati e impostati ${mappedOrders.length} ordini nello stato.`);
       }
     } catch (err) {
       console.error("[STORE] Eccezione nel caricamento ordini:", err);

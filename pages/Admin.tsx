@@ -17,6 +17,8 @@ interface AdminProps {
   updateStatus: (id: string, status: OrderStatus) => void;
   deleteOrder: (id: string) => Promise<any> | void;
   onLogout: () => void;
+  refreshOrders?: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 interface ToastInfo {
@@ -24,11 +26,19 @@ interface ToastInfo {
   message: string;
 }
 
-const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) => {
+const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout, refreshOrders, isLoading }) => {
   const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number>(0);
+
+  // Sincronizzazione automatica ordini all'ingresso nel pannello Admin
+  useEffect(() => {
+    if (refreshOrders) {
+      console.log("[ADMIN] Caricamento automatico ordini dal database...");
+      refreshOrders();
+    }
+  }, []);
 
   // Modal per gestione link foto prodotti personalizzati (Sincronizzazione Cloud Supabase)
   const [showImagesModal, setShowImagesModal] = useState<boolean>(false);
@@ -366,6 +376,23 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* PULSANTE RICARICA ORDINI */}
+            {refreshOrders && (
+              <button
+                onClick={async () => {
+                  showToast('info', 'Sincronizzazione ordini da Supabase in corso...');
+                  await refreshOrders();
+                  showToast('success', 'Lista ordini aggiornata con successo!');
+                }}
+                disabled={isLoading}
+                className="px-4 py-2.5 bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-800 dark:hover:bg-zinc-700 border border-zinc-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+                title="Sincronizza e ricarica tutti gli ordini dal database Supabase"
+              >
+                <span className={isLoading ? 'animate-spin inline-block' : ''}>↻</span>
+                <span>{isLoading ? 'Sincronizzazione...' : 'Ricarica Ordini'}</span>
+              </button>
+            )}
+
             {/* PULSANTE GESTIONE FOTO PRODOTTI */}
             <button
               onClick={openImagesModal}
@@ -493,7 +520,13 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
         </div>
 
         {/* LISTA ORDINI */}
-        {filteredOrders.length === 0 ? (
+        {isLoading && orders.length === 0 ? (
+          <div className="bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80 p-16 rounded-3xl text-center shadow-sm">
+            <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <h3 className="text-xl font-serif text-zinc-900 dark:text-white mb-2">Caricamento ordini in corso...</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Recupero di tutti gli ordini (Pacchetto 100 Foto e Prodotti Personalizzati) dal database Supabase.</p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
           <div className="bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/80 p-16 rounded-3xl text-center shadow-sm">
             <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center mx-auto mb-4 text-2xl text-zinc-400">
               📋
@@ -504,10 +537,18 @@ const Admin: FC<AdminProps> = ({ orders, updateStatus, deleteOrder, onLogout }) 
                 ? `Nessun risultato corrispondente al termine di ricerca "${searchQuery}". Prova a reimpostare i filtri.` 
                 : 'Al momento non sono presenti ordini in questo stato.'}
             </p>
+            {refreshOrders && (
+              <button
+                onClick={() => refreshOrders()}
+                className="mt-4 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+              >
+                ↻ Ricarica dal Database Supabase
+              </button>
+            )}
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="mt-4 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-xl text-xs font-bold transition-colors"
+                className="mt-4 ml-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-xl text-xs font-bold transition-colors"
               >
                 Azzera ricerca
               </button>

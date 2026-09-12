@@ -24,9 +24,13 @@ const Auth: FC<AuthProps> = ({ mode, navigate, onLogin }) => {
       }
       setIsLoading(true);
       try {
-        await onLogin(email, password, mode === 'register' ? phone : undefined);
-        console.log("[AUTH] Autenticazione completata. Reindirizzamento alla galleria pacchetti.");
-        navigate('packages');
+        const loggedUser = await onLogin(email, password, mode === 'register' ? phone : undefined);
+        console.log("[AUTH] Autenticazione completata per:", loggedUser?.email, "Ruolo:", loggedUser?.role);
+        if (loggedUser?.role === 'admin') {
+          navigate('admin');
+        } else {
+          navigate('dashboard');
+        }
       } catch (error: any) {
         alert("Errore Autenticazione: " + (error.message || "Email o password non corretti."));
       } finally {
